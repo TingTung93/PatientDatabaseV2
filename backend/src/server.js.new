@@ -1,0 +1,173 @@
+/**
+ * Updates the server.js file to integrate the new WebSocket functionality
+ * This modification connects the WebSocket integration with the OCR service
+ */
+
+require('dotenv').config();
+const express = require('express');
+const cors = require('cors');
+const path = require('path');
+const fs = require('fs');
+const http = require('http');
+const { Server } = require('socket.io');
+const { db, initializeDatabase } = require('./database/init');
+const eventSystem = require('./events/HybridEventSystem');
+const logger = require('./utils/logger');
+const ocrService = require('./services/OcrService');
+const { getInstance: getWebSocketService } = require('./services/WebSocketService');
+const { WebSocketIntegration } = require('./websocket');
+
+// Create Express app
+const app = express();
+
+// Define allowed origins
+const allowedOrigins = [
+    process.env.FRONTEND_URL || 'http://localhost:5173', // Use 5173 as likely default based on error
+    'http://localhost:3000' // Add the origin reported in the error
+];
+
+// Middleware setup
+app.use(cors({
+    origin: function (origin, callback) {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+        if (allowedOrigins.indexOf(origin) === -1) {
+            const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+            return callback(new Error(msg), false);
+        }
+        return callback(null, true);
+    },
+    credentials: true
+}));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Create upload directories if they don't exist
+const uploadDirs = [
+    path.join(__dirname, '../uploads'),
+    path.join(__dirname, '../uploads/caution-cards')
+];
+
+uploadDirs.forEach(dir => {
+    if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+    }
+});
+
+// Routes
+const patientsRouter = require('./routes/patients');
+const cautionCardsRouter = require('./routes/caution-cards');
+
+// API v1 routes
+const apiV1Router = express.Router();
+app.use('/api/v1', apiV1Router);
+
+apiV1Router.use('/patients', patientsRouter);
+apiV1Router.use('/caution-cards', cautionCardsRouter);
+
+// Serve static files
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+app.use(express.static(path.join(__dirname, '../public')));
+
+// Root route
+app.get('/', (req, res) => {
+    res.json({
+        message: 'Patient Information System API',
+        version: '1.0.0'
+    });
+});
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+    res.json({ 
+        status: 'ok', 
+        message: 'Service is running',
+        database: db.sequelize ? 'connected' : 'disconnected',
+        ocr: ocrService.isReady ? 'ready' : 'not ready',
+        websocket: eventSystem.isInitialized ? 'connected' : 'disconnected'
+    });
+});
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+    logger.error('Unhandled error:', err);
+    res.status(err.statusCode || 500).json({
+        status: 'error',
+        message: err.message || 'Internal server error'
+    });
+});
+
+async function startServer() {
+    try {
+        // Step 1: Initialize database
+        logger.info('Initializing database...');
+        await initializeDatabase();
+        logger.info('Database initialized successfully');
+
+        // Step 2: Create HTTP server
+        const server = http.createServer(app);
+        
+        // Step 3: Initialize WebSocket service
+        const webSocketService = getWebSocketService(server);
+        logger.info('WebSocket service initialized');
+
+        // Step 4: Initialize event system
+        await eventSystem.initialize(new Server(server, {
+            cors: {
+                origin: allowedOrigins, // Use the same array here
+                methods: ['GET', 'POST'],
+                credentials: true
+            }
+        }));
+        logger.info('Event system initialized');
+
+        // Step 5: Initialize OCR service
+        logger.info('Initializing OCR service...');
+        await ocrService.initialize();
+        logger.info('OCR service initialized successfully');
+        
+        // Step 6: Initialize WebSocket integration with OCR service
+        logger.info('Initializing WebSocket integration...');
+        await WebSocketIntegration.initialize(ocrService);
+        logger.info('WebSocket integration initialized successfully');
+
+        // Step 7: Start the server
+        const port = process.env.PORT || 5000;
+        server.listen(port, () => {
+            logger.info(`Server running on port ${port}`);
+            logger.info('All services initialized successfully');
+        });
+
+        // Handle graceful shutdown
+        const shutdown = async () => {
+            logger.info('Starting graceful shutdown...');
+            
+            // Shutdown services in reverse order
+            await WebSocketIntegration.shutdown();
+            logger.info('WebSocket integration shut down');
+            
+            await ocrService.shutdown();
+            logger.info('OCR service shut down');
+            
+            await eventSystem.shutdown();
+            logger.info('Event system shut down');
+            
+            server.close(() => {
+                logger.info('HTTP server closed');
+                process.exit(0);
+            });
+        };
+
+        process.on('SIGTERM', shutdown);
+        process.on('SIGINT', shutdown);
+
+    } catch (error) {
+        logger.error('Failed to start server:', error);
+        process.exit(1);
+    }
+}
+
+// Start the server
+startServer();
+
+module.exports = app;
