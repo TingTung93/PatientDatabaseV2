@@ -9,7 +9,11 @@ class ReportValidator extends BaseValidator {
       'image/png',
       'image/tiff',
       'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'text/plain',                                // Added TXT support
+      'application/rtf',                           // Added RTF support
+      'text/rtf',                                  // Alternative MIME type for RTF
+      'application/x-rtf'                          // Another alternative MIME type for RTF
     ];
     this.maxFileSize = 10 * 1024 * 1024; // 10MB
   }
@@ -110,4 +114,4 @@ class ReportValidator extends BaseValidator {
   }
 }
 
-module.exports = ReportValidator; 
+module.exports = ReportValidator;
