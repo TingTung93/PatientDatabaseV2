@@ -169,6 +169,10 @@ export const CautionCardUploadPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!selectedPatient) {
+      setGlobalError('Please select a patient');
+      return;
+    }
     if (uploadItems.length === 0) {
       setGlobalError('Please select at least one file');
       return;
@@ -248,7 +252,7 @@ export const CautionCardUploadPage: React.FC = () => {
   return (
     <Container maxWidth="md">
       <Box sx={{ py: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
+        <Typography variant="h4" component="div" gutterBottom>
           Upload Caution Cards
         </Typography>
 
