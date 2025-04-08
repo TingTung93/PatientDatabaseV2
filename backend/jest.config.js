@@ -1,7 +1,7 @@
 /** @type {import('jest').Config} */
 export default {
   testEnvironment: 'node',
-  setupFilesAfterEnv: ['<rootDir>/src/tests/setup.js'],
+  setupFilesAfterEnv: ['<rootDir>/__tests__/setup.js'],
   testMatch: ['**/tests/**/*.test.js', '**/__tests__/**/*.test.js'],
   collectCoverage: true,
   coverageDirectory: 'coverage',

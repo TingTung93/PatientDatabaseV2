@@ -20,6 +20,8 @@ import { ToastProvider } from './components/common/Toast';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { errorReportingService } from './services/errorReportingService';
 import { CautionCardsPage } from './pages/CautionCardsPage';
+import ReportUploadPage from './pages/ReportUploadPage';
+import { CautionCardUploadPage } from './pages/CautionCardUploadPage';
 // import AppRoutes from './routes'; // Cannot find module - commented out
 // import CautionCardsPage from './pages/CautionCardsPage';
 // import OCRPage from './pages/OCRPage';
@@ -145,11 +147,31 @@ const App: React.FC = () => {
                         }
                       />
                       <Route
+                        path="/reports/upload"
+                        element={
+                          <ProtectedRoute>
+                            <Layout>
+                              <ReportUploadPage />
+                            </Layout>
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
                         path="/caution-cards"
                         element={
                           <ProtectedRoute>
                             <Layout>
                               <CautionCardsPage />
+                            </Layout>
+                          </ProtectedRoute>
+                        }
+                      />
+                      <Route
+                        path="/caution-cards/upload"
+                        element={
+                          <ProtectedRoute>
+                            <Layout>
+                              <CautionCardUploadPage />
                             </Layout>
                           </ProtectedRoute>
                         }

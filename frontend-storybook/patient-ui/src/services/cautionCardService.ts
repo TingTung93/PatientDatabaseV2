@@ -33,9 +33,10 @@ interface SearchCautionCardsParams {
 
 interface ProcessCautionCardUploadData {
   file: File;
+  patientId?: string; // Made optional since it's not needed for initial processing
   bloodType?: string;
-  antibodies?: string[]; // Assuming JSON array means string array
-  transfusionRequirements?: string[]; // Assuming JSON array means string array
+  antibodies?: string[];
+  transfusionRequirements?: string[];
 }
 
 interface UpdateCautionCardRequest {
@@ -61,27 +62,28 @@ interface DeleteCautionCardRequest {
   updatedBy: string;
 }
 
-const BASE_URL = '/caution-cards';
+const CAUTION_CARD_BASE_URL = '/caution-cards'; // Removed /api/v1 prefix
+const PATIENT_BASE_URL = '/patients'; // Removed /api/v1 prefix
 
 export const cautionCardService = {
   // Get all caution cards with filtering
   getCautionCards: async (
     params?: GetAllCautionCardsParams
   ): Promise<PaginatedResponse<CautionCard>> => {
-    const response = await apiClient.get<PaginatedResponse<CautionCard>>(BASE_URL, { params });
+    const response = await apiClient.get<PaginatedResponse<CautionCard>>(CAUTION_CARD_BASE_URL, { params });
     return response.data;
   },
 
   // Get orphaned cards (not linked to a patient)
   getOrphanedCards: async (): Promise<CautionCard[]> => {
-    const response = await apiClient.get<CautionCard[]>(`${BASE_URL}/orphaned`);
+    const response = await apiClient.get<CautionCard[]>(`${CAUTION_CARD_BASE_URL}/orphaned`);
     return response.data;
   },
 
   // Search caution cards
   searchCautionCards: async (params: SearchCautionCardsParams): Promise<CautionCard[]> => {
     // API doc implies list response, not paginated, confirm if needed
-    const response = await apiClient.get<CautionCard[]>(`${BASE_URL}/search`, { params });
+    const response = await apiClient.get<CautionCard[]>(`${CAUTION_CARD_BASE_URL}/search`, { params });
     return response.data;
   },
 
@@ -91,7 +93,7 @@ export const cautionCardService = {
       throw new Error(`Invalid caution card ID: ${id}. Must be a number.`);
     }
     console.log('Calling API getCautionCardById with caution card ID:', id, typeof id); // Temporary logging
-    const response = await apiClient.get<CautionCard>(`${BASE_URL}/${id}`);
+    const response = await apiClient.get<CautionCard>(`${CAUTION_CARD_BASE_URL}/${id}`);
     return response.data;
   },
 
@@ -99,13 +101,9 @@ export const cautionCardService = {
   processCautionCardUpload: async (data: ProcessCautionCardUploadData): Promise<CreateResponse> => {
     const formData = new FormData();
     formData.append('file', data.file);
-    if (data.bloodType) formData.append('bloodType', data.bloodType);
-    // API expects JSON arrays for these fields
-    if (data.antibodies) formData.append('antibodies', JSON.stringify(data.antibodies));
-    if (data.transfusionRequirements)
-      formData.append('transfusionRequirements', JSON.stringify(data.transfusionRequirements));
-
-    const response = await apiClient.post<CreateResponse>(`${BASE_URL}/process`, formData, {
+    
+    // Process the caution card first without linking to patient
+    const response = await apiClient.post<CreateResponse>(`${CAUTION_CARD_BASE_URL}/process`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     return response.data;
@@ -120,7 +118,7 @@ export const cautionCardService = {
       throw new Error(`Invalid caution card ID: ${id}. Must be a number.`);
     }
     console.log('Calling API updateCautionCard with caution card ID:', id, typeof id); // Temporary logging
-    const response = await apiClient.put<CautionCard>(`${BASE_URL}/${id}`, data);
+    const response = await apiClient.put<CautionCard>(`${CAUTION_CARD_BASE_URL}/${id}`, data);
     return response.data;
   },
 
@@ -133,7 +131,7 @@ export const cautionCardService = {
       throw new Error(`Invalid caution card ID: ${id}. Must be a number.`);
     }
     console.log('Calling API markAsReviewed with caution card ID:', id, typeof id); // Temporary logging
-    const response = await apiClient.post<MarkReviewedResponse>(`${BASE_URL}/${id}/review`, data);
+    const response = await apiClient.post<MarkReviewedResponse>(`${CAUTION_CARD_BASE_URL}/${id}/review`, data);
     return response.data;
   },
 
@@ -146,7 +144,7 @@ export const cautionCardService = {
       throw new Error(`Invalid caution card ID: ${id}. Must be a number.`);
     }
     console.log('Calling API linkCautionCardToPatient with caution card ID:', id, typeof id); // Temporary logging
-    const response = await apiClient.post<LinkPatientResponse>(`${BASE_URL}/${id}/link`, data);
+    const response = await apiClient.post<LinkPatientResponse>(`${CAUTION_CARD_BASE_URL}/${id}/link`, data);
     return response.data;
   },
 
@@ -160,7 +158,7 @@ export const cautionCardService = {
     }
     console.log('Calling API deleteCautionCard with caution card ID:', id, typeof id); // Temporary logging
     // Note: DELETE request has a body according to docs
-    const response = await apiClient.delete<DeleteResponse>(`${BASE_URL}/${id}`, { data });
+    const response = await apiClient.delete<DeleteResponse>(`${CAUTION_CARD_BASE_URL}/${id}`, { data });
     return response.data;
   },
 };

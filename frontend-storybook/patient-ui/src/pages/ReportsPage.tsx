@@ -100,7 +100,18 @@ const ReportsPageContent: React.FC = () => {
         Reports Management
       </Typography>
 
-      <ReportFilterControls onFilterChange={handleFilterChange} />
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <ReportFilterControls onFilterChange={handleFilterChange} />
+        <Button
+          variant="contained"
+          color="primary"
+          component={Link}
+          to="/reports/upload"
+          sx={{ ml: 2 }}
+        >
+          Upload Report
+        </Button>
+      </Box>
 
       {isLoading ? (
         <CircularProgress />

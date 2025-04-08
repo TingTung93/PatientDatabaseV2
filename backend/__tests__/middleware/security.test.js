@@ -2,17 +2,13 @@ import request from 'supertest';
 import express from 'express';
 import { jest } from '@jest/globals';
 import process from 'node:process';
-import { setupMockSecurity } from '../helpers/testUtils.js';
+import { securityMocks } from '../setup.js';
 
-/* global describe, beforeEach, beforeAll, it, expect */
+/* global describe, beforeEach, it, expect */
 
 describe('Security Middleware', () => {
     let testApp;
-    let securityMocks;
-
-    beforeAll(() => {
-        securityMocks = setupMockSecurity();
-    });
+    const { helmet, rateLimit } = securityMocks;
 
     beforeEach(() => {
         testApp = express();
@@ -21,7 +17,7 @@ describe('Security Middleware', () => {
 
     describe('Helmet Security Headers', () => {
         beforeEach(() => {
-            testApp.use(securityMocks.helmetMock());
+            testApp.use(helmet());
         });
 
         it('should set security headers', async () => {
@@ -32,25 +28,24 @@ describe('Security Middleware', () => {
                 .expect(200);
 
             // Check essential security headers are set
-            expect(res.headers).toHaveProperty('x-dns-prefetch-control');
-            expect(res.headers).toHaveProperty('x-frame-options');
-            expect(res.headers).toHaveProperty('x-download-options');
-            expect(res.headers).toHaveProperty('x-content-type-options');
-            expect(res.headers).toHaveProperty('x-xss-protection');
+            expect(res.headers).toHaveProperty('x-dns-prefetch-control', 'off');
+            expect(res.headers).toHaveProperty('x-frame-options', 'DENY');
+            expect(res.headers).toHaveProperty('x-xss-protection', '1; mode=block');
+            expect(res.headers).toHaveProperty('x-content-type-options', 'nosniff');
         });
 
         it('should set strict-transport-security header in production', async () => {
             const originalEnv = process.env.NODE_ENV;
             process.env.NODE_ENV = 'production';
             
-            testApp.use(securityMocks.helmetMock());
+            testApp.use(helmet());
             testApp.get('/test', (req, res) => res.send('ok'));
 
             const res = await request(testApp)
                 .get('/test')
                 .expect(200);
 
-            expect(res.headers).toHaveProperty('strict-transport-security');
+            expect(res.headers).toHaveProperty('strict-transport-security', 'max-age=31536000; includeSubDomains');
             
             // Restore environment
             process.env.NODE_ENV = originalEnv;
@@ -64,7 +59,7 @@ describe('Security Middleware', () => {
         };
 
         beforeEach(() => {
-            testApp.use(securityMocks.rateLimitMock(rateLimitConfig));
+            testApp.use(rateLimit(rateLimitConfig));
             testApp.get('/test', (req, res) => res.send('ok'));
         });
 
@@ -73,20 +68,13 @@ describe('Security Middleware', () => {
                 .get('/test')
                 .expect(200);
 
-            expect(securityMocks.rateLimitMock).toHaveBeenCalledWith(expect.objectContaining({
+            expect(rateLimit).toHaveBeenCalledWith(expect.objectContaining({
                 windowMs: rateLimitConfig.windowMs,
                 max: rateLimitConfig.max
             }));
         });
 
         it('should allow requests within rate limit', async () => {
-            // Mock rate limiter to track requests but not block
-            securityMocks.rateLimitMock.mockImplementation(() => (req, res, next) => {
-                res.setHeader('X-RateLimit-Limit', 100);
-                res.setHeader('X-RateLimit-Remaining', 99);
-                next();
-            });
-
             const res = await request(testApp)
                 .get('/test')
                 .expect(200);
@@ -96,9 +84,11 @@ describe('Security Middleware', () => {
         });
 
         it('should block requests when rate limit exceeded', async () => {
-            // Mock rate limiter to simulate limit exceeded
+            // Reset the mock to remove default implementation
+            rateLimit.mockReset();
+            
             // Configure rate limiter to simulate limit exceeded
-            securityMocks.rateLimitMock.mockImplementation(() => (_, res) => {
+            rateLimit.mockImplementation(() => (req, res) => {
                 res.status(429).json({
                     status: 'error',
                     code: 'TOO_MANY_REQUESTS',
@@ -106,7 +96,12 @@ describe('Security Middleware', () => {
                 });
             });
 
-            const res = await request(testApp)
+            // Create a new app instance with the updated mock
+            const app = express();
+            app.use(rateLimit(rateLimitConfig));
+            app.get('/test', (req, res) => res.send('ok'));
+
+            const res = await request(app)
                 .get('/test')
                 .expect(429);
 

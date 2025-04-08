@@ -4,11 +4,13 @@ import { useProcessCautionCard } from '../../hooks/useCautionCards'; // Correct 
 interface CautionCardUploadModalProps {
   isOpen: boolean;
   onClose: () => void;
+  patientId: string;  // Add required patientId
 }
 
 export const CautionCardUploadModal: React.FC<CautionCardUploadModalProps> = ({
   isOpen,
   onClose,
+  patientId,
 }) => {
   const [file, setFile] = useState<File | null>(null);
   const processMutation = useProcessCautionCard();
@@ -24,7 +26,10 @@ export const CautionCardUploadModal: React.FC<CautionCardUploadModalProps> = ({
   const handleUpload = () => {
     if (file) {
       processMutation.mutate(
-        { file },
+        { 
+          file,
+          patientId 
+        },
         {
           onSuccess: () => {
             console.log('Caution card uploaded for processing.');

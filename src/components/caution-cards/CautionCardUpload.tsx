@@ -1,27 +1,39 @@
 import React, { useState, useRef } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query'; // Correct package name
+import { useMutation } from '@tanstack/react-query';
 import { cautionCardService } from '../../services/cautionCardService';
 import { ocrService } from '../../services/ocrService';
 
-interface CautionCardUploadProps {
-  patientId?: number;
-  onUploadComplete?: () => void;
+/* global console */
+
+interface CautionCardUploadResult {
+  id: number;
+  // Add other fields that come back from the API if needed
 }
 
-export const CautionCardUpload: React.FC<CautionCardUploadProps> = ({ patientId, onUploadComplete }) => {
+interface CautionCardUploadProps {
+  patientId: string;
+  onUploadComplete?: () => void;
+  onSuccess?: () => void;
+  onError?: (message: string) => void;
+}
+
+export const CautionCardUpload: React.FC<CautionCardUploadProps> = ({ 
+  patientId, 
+  onUploadComplete, 
+  onSuccess, 
+  onError 
+}) => {
   const [file, setFile] = useState<File | null>(null);
   const [bloodType, setBloodType] = useState('');
   const [antibodies, setAntibodies] = useState<string[]>([]);
   const [transfusionRequirements, setTransfusionRequirements] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [ocrProgress, setOcrProgress] = useState(0);
-  const [uploadError, setUploadError] = useState<string | null>(null); // Add state for user-facing error
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const queryClient = useQueryClient();
-
-  const uploadMutation = useMutation(
-    async (formData: FormData) => {
+  const uploadMutation = useMutation<CautionCardUploadResult, Error, FormData>({
+    mutationFn: async (formData: FormData) => {
       // First process with OCR
       const ocrResponse = await ocrService.processDocument(formData);
       
@@ -37,43 +49,40 @@ export const CautionCardUpload: React.FC<CautionCardUploadProps> = ({ patientId,
         }
       }
 
-      // Now upload the caution card
-      formData.append('bloodType', bloodType);
-      if (antibodies.length > 0) {
-        formData.append('antibodies', JSON.stringify(antibodies));
-      }
-      if (transfusionRequirements.length > 0) {
-        formData.append('transfusionRequirements', JSON.stringify(transfusionRequirements));
-      }
-      if (patientId) {
-        formData.append('patientId', patientId.toString());
-      }
+      // Create a new FormData instance for the caution card upload
+      const uploadFormData = new FormData();
+      uploadFormData.append('file', formData.get('file') as File);
+      uploadFormData.append('patientId', patientId);
+      uploadFormData.append('bloodType', bloodType);
+      uploadFormData.append('antibodies', JSON.stringify(antibodies));
+      uploadFormData.append('transfusionRequirements', JSON.stringify(transfusionRequirements));
 
-      return cautionCardService.processCautionCard(formData);
+      return await cautionCardService.processCautionCard(uploadFormData);
     },
-    {
-      onSuccess: () => {
-        setUploadError(null); // Clear error on success
-        queryClient.invalidateQueries(['cautionCards']);
-        setFile(null);
-        setBloodType('');
-        setAntibodies([]);
-        setTransfusionRequirements([]);
-        setIsProcessing(false);
-        setOcrProgress(0);
-        if (fileInputRef.current) {
-          fileInputRef.current.value = '';
-        }
-        onUploadComplete?.();
-      },
-      onError: (error: any) => { // Use 'any' for now, better typing can be added later
-        console.error('Upload failed:', error); // Keep detailed logging
-        // Set user-friendly error message
-        setUploadError('Upload failed. Please check the file or try again later.');
-        setIsProcessing(false);
-      },
+    onSuccess: (result) => {
+      // eslint-disable-next-line no-console
+      console.log('Caution Card processed successfully! ID:', result.id);
+      onSuccess?.();
+      onUploadComplete?.();
+      
+      // Reset form
+      setFile(null);
+      setBloodType('');
+      setAntibodies([]);
+      setTransfusionRequirements([]);
+      setOcrProgress(0);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      setIsProcessing(false);
+    },
+    onError: (error: Error) => {
+      const message = error.message || 'An unknown error occurred during upload.';
+      setUploadError(message);
+      onError?.(message);
+      setIsProcessing(false);
     }
-  );
+  });
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0];
@@ -87,10 +96,16 @@ export const CautionCardUpload: React.FC<CautionCardUploadProps> = ({ patientId,
     if (!file) return;
 
     setIsProcessing(true);
-    setUploadError(null); // Clear previous errors on new submission
-    const formData = new FormData();
-    formData.append('file', file);
-    uploadMutation.mutate(formData);
+    setUploadError(null);
+    
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      await uploadMutation.mutateAsync(formData);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'An unknown error occurred during upload.';
+      setUploadError(message);
+    }
   };
 
   const handleAntibodyChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -164,7 +179,7 @@ export const CautionCardUpload: React.FC<CautionCardUploadProps> = ({ patientId,
         <button type="submit" disabled={!file || isProcessing}>
           {isProcessing ? 'Processing...' : 'Upload'}
         </button>
-        {uploadError && <div className="error-message" style={{ color: 'red', marginTop: '10px' }}>{uploadError}</div>} {/* Display error message */}
+        {uploadError && <div className="error-message" style={{ color: 'red', marginTop: '10px' }}>{uploadError}</div>}
       </form>
     </div>
   );

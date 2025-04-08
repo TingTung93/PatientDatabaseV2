@@ -188,11 +188,17 @@ export const CautionCardsPage: React.FC = () => {
         Caution Cards
       </Typography>
 
-      {/* TODO: Implement FilterBar */}
-      <Box sx={{ mb: 2 }}>
-        {' '}
-        {/* Add some margin below the upload component */}
-        <CautionCardUpload patientId={patientId!} /> {/* Pass patientId */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        {/* TODO: Implement FilterBar */}
+        <div>{/* Placeholder for filters */}</div>
+        <Button
+          variant="contained"
+          color="primary"
+          component={Link}
+          to="/caution-cards/upload"
+        >
+          Upload Caution Cards
+        </Button>
       </Box>
 
       <Card sx={{ mb: 3 }}>

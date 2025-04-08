@@ -28,6 +28,7 @@ interface SearchCautionCardsParams {
 }
 interface ProcessCautionCardUploadData {
   file: File;
+  patientId: string;
   bloodType?: string;
   antibodies?: string[];
   transfusionRequirements?: string[];

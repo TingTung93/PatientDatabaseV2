@@ -12,10 +12,16 @@ import { FileUploadUI } from '../common/FileUploadUI';
 import { LinearProgress, Box, Typography, Alert as MuiAlert } from '@mui/material'; // Use MUI Alert
 
 interface CautionCardUploadProps {
-  patientId: string; // Assume patientId is required for the upload
+  patientId: string;
+  onSuccess?: () => void;
+  onError?: (error: string) => void;
 }
 
-export const CautionCardUpload: React.FC<CautionCardUploadProps> = ({ patientId }): JSX.Element => {
+export const CautionCardUpload: React.FC<CautionCardUploadProps> = ({ 
+  patientId,
+  onSuccess,
+  onError
+}): JSX.Element => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   // Remove state related to fileUploadService progress if not needed by cautionCardService
   // const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null); // Removed (cautionCardService doesn't provide progress)
@@ -65,7 +71,6 @@ export const CautionCardUpload: React.FC<CautionCardUploadProps> = ({ patientId 
 
   // --- Upload Handler (Antd Form onFinish) ---
   const handleUpload = async (): Promise<void> => {
-    // console.log('[Debug] handleUpload triggered.'); // <-- Remove log
     if (!selectedFile) {
       setUploadError('Please select an image file (PNG, JPG) to upload.');
       form.setFields([{ name: 'file', errors: ['Please select a file.'] }]);
@@ -73,60 +78,29 @@ export const CautionCardUpload: React.FC<CautionCardUploadProps> = ({ patientId 
     }
 
     setUploadError(null);
-    // setUploadProgress(null); // Removed state
     setIsUploading(true);
 
-    // console.log('[Debug] selectedFile before upload attempt:', selectedFile); // <-- Remove log
-
     try {
-      // console.log('[Debug] Attempting cautionCardService.processCautionCardUpload...'); // <-- Remove log
-      // Use the correct service method
       const result = await cautionCardService.processCautionCardUpload({
-        file: selectedFile, // Pass the file object
-        // Add other optional fields like bloodType, antibodies if collected from the form
+        file: selectedFile,
       });
-      // Handle success based on CreateResponse structure (e.g., result.id)
+
+      // Success handling
       console.log('Caution Card processed successfully! ID:', result.id);
-      // Optionally show a success Alert
-      // setUploadSuccess('Caution card processed successfully!'); // Need state for this
+      onSuccess?.();
       form.resetFields();
-      setSelectedFile(null); // Reset the file state
+      setSelectedFile(null);
     } catch (error: any) {
-      // Handle errors from the API call
       console.error('Upload failed:', error);
       const message =
         error?.response?.data?.message ||
         error.message ||
         'An unknown error occurred during upload.';
       setUploadError(message);
+      onError?.(message);
     } finally {
       setIsUploading(false);
-      // setUploadProgress(null); // Removed state
     }
-
-    /* // --- Old fileUploadService logic ---
-    const result: UploadResult = await fileUploadService.uploadFile(
-      selectedFile,
-      FileTypeCategory.CautionCard,
-      patientId,
-      (progress: UploadProgress) => {
-        // setUploadProgress(progress); // Removed state
-      }
-    );
-    */
-
-    // Logic moved into try/catch/finally block above
-    // setIsUploading(false);
-    // setUploadProgress(null); // Removed state
-    //
-    // if (result.success) { // Logic moved
-    //   console.log('Caution Card uploaded successfully!', result.fileUrl);
-    //   form.resetFields();
-    //   setSelectedFile(null);
-    // } else {
-    //   console.error('Upload failed:', result.message);
-    //   setUploadError(result.message || 'An unknown error occurred during upload.');
-    // }
   };
 
   return (
@@ -152,6 +126,7 @@ export const CautionCardUpload: React.FC<CautionCardUploadProps> = ({ patientId 
           selectedFile={selectedFile}
           onReset={handleFileReset}
           disabled={isUploading}
+          data-testid="caution-card-upload" // Added for testing
           instructions={`Drag & drop PNG or JPG file here (Max ${fileValidationService.getMaxFileSizeMB()}MB), or click to select`}
         />
 

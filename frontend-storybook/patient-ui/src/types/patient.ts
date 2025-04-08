@@ -65,6 +65,10 @@ export const DEFAULT_NOTE: Partial<Note> = {
 
 export interface Patient {
   id: string;
+  firstName: string;
+  lastName: string;
+  medicalRecordNumber?: string;
+  dateOfBirth?: string;
   identification: PatientIdentification;
   demographics: Demographics;
   bloodProfile: BloodProfile;

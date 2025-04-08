@@ -1,192 +1,119 @@
-const { upload, antivirus } = require('../config/upload.config');
-const createError = require('http-errors');
-const fs = require('fs').promises;
-const fsSync = require('fs');
-const path = require('path');
-const crypto = require('crypto');
-const secureFileHandler = require('../utils/secureFileHandler');
-const logger = require('../utils/logger');
+import multer from 'multer';
+import path from 'path';
+import { promises as fs } from 'fs';
+import { v4 as uuidv4 } from 'uuid';
+import NodeClam from 'clamscan';
+import config from '../config/upload.config.js';
+import logger from '../utils/logger.js';
 
-class FileValidationMiddleware {
-  static async validateMimeType(file) {
-    if (!upload.allowedTypes.includes(file.mimetype)) {
-      throw createError(415, `Invalid file type. Allowed types: ${upload.allowedTypes.join(', ')}`);
+// Initialize ClamAV scanner
+const clamscan = new NodeClam().init({
+    removeInfected: true,
+    quarantineInfected: false,
+    scanLog: null,
+    debugMode: false,
+    fileList: null,
+    scanTimeout: 60000,
+    ...config.clamav
+});
+
+// Configure multer storage
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, config.tempUploadDir);
+    },
+    filename: (req, file, cb) => {
+        const safeFilename = path.basename(file.originalname).replace(/[^a-zA-Z0-9.-]/g, '_');
+        const uniqueFilename = `${uuidv4()}-${safeFilename}`;
+        cb(null, uniqueFilename);
+    }
+});
+
+// File size and type validation
+export const validateFile = (req, res, next) => {
+    if (!req.file) {
+        return res.status(400).json({
+            status: 'error',
+            code: 'NO_FILE',
+            message: 'No file uploaded'
+        });
     }
 
-    if (upload.contentVerification.enabled && upload.contentVerification.mimeTypeStrict) {
-      const buffer = await fs.readFile(file.path);
-      // Use secureFileHandler's detectFileType instead of file signatures
-      const detectedType = secureFileHandler.detectFileType(buffer);
-      
-      if (!detectedType || detectedType !== file.mimetype) {
-        throw createError(415, 'File content does not match declared type');
-      }
-    }
-  }
-
-  static validateFileSize(file) {
-    if (file.size > upload.maxFileSize) {
-      throw createError(413, `File too large. Maximum size: ${upload.maxFileSize / 1024 / 1024}MB`);
-    }
-  }
-
-  static validateFileName(filename) {
-    if (filename.length > upload.maxFilenameLength) {
-      throw createError(400, `Filename too long. Maximum length: ${upload.maxFilenameLength}`);
+    // Size validation (10MB limit)
+    if (req.file.size > config.maxFileSize) {
+        return res.status(413).json({
+            status: 'error',
+            code: 'FILE_TOO_LARGE',
+            message: `File size exceeds limit of ${config.maxFileSize / (1024 * 1024)}MB`
+        });
     }
 
-    // Use secureFileHandler to sanitize filename
-    const sanitizedName = secureFileHandler.sanitizeFilename(filename);
-    if (sanitizedName !== filename) {
-      // Instead of throwing an error, we'll now use the sanitized filename
-      return sanitizedName;
+    // MIME type validation
+    if (!config.allowedMimeTypes.includes(req.file.mimetype)) {
+        return res.status(415).json({
+            status: 'error',
+            code: 'INVALID_FILE_TYPE',
+            message: 'File type not allowed'
+        });
     }
-    
-    return filename;
-  }
 
-  static async scanForVirus(filePath) {
-    if (!antivirus.enabled) return;
+    next();
+};
 
+// Virus scanning middleware
+export const scanFile = async (req, res, next) => {
     try {
-      // Leverage secureFileHandler's validation
-      const validationResult = await secureFileHandler.validateFile(filePath);
-      
-      if (!validationResult.valid) {
-        // If validation failed, move to quarantine
-        await secureFileHandler.moveToQuarantine(filePath);
-        throw createError(400, validationResult.message);
-      }
-      
-      return validationResult.type; // Return detected mime type
-    } catch (err) {
-      if (err.statusCode) {
-        throw err; // Re-throw HTTP errors
-      }
-      throw createError(500, `Security validation failed: ${err.message}`);
-    }
-  }
+        const { file } = req;
+        if (!file) return next();
 
-  static async ensureTempDirectory() {
-    try {
-      await fs.mkdir(upload.tempDir, { recursive: true, mode: 0o750 });
-    } catch (error) {
-      throw createError(500, 'Failed to create temp directory');
-    }
-  }
-
-  static async generateTempFilePath(originalName) {
-    const timestamp = Date.now();
-    const randomBytes = crypto.randomBytes(16).toString('hex');
-    const sanitizedName = secureFileHandler.sanitizeFilename(path.basename(originalName));
-    return path.join(upload.tempDir, `${timestamp}-${randomBytes}-${sanitizedName}`);
-  }
-
-  static getFileHash(filePath) {
-    return secureFileHandler.calculateChecksum(filePath);
-  }
-
-  static validate() {
-    return async (req, res, next) => {
-      try {
-        if (!req.file && !req.files) {
-          throw createError(400, 'No file uploaded');
-        }
-
-        const files = req.files || [req.file];
-        req.tempFilePaths = [];
-        req.validatedFiles = [];
-
-        await this.ensureTempDirectory();
-
-        for (const file of files) {
-          // Sanitize filename
-          const sanitizedName = this.validateFileName(file.originalname);
-          file.originalname = sanitizedName;
-          
-          // Validate size
-          this.validateFileSize(file);
-          
-          // Validate MIME type
-          await this.validateMimeType(file);
-          
-          // Move to temporary location
-          const tempPath = await this.generateTempFilePath(file.originalname);
-          await fs.copyFile(file.path, tempPath);
-          
-          // Calculate checksum for integrity verification
-          const checksum = await this.getFileHash(tempPath);
-          
-          // Scan for viruses and validate file
-          const detectedMimeType = await this.scanForVirus(tempPath);
-          
-          // Store validated file info
-          req.validatedFiles.push({
-            originalName: file.originalname,
-            tempPath,
-            size: file.size,
-            mimeType: detectedMimeType || file.mimetype,
-            checksum
-          });
-          
-          req.tempFilePaths.push(tempPath);
-
-          // Clean up the original file
-          await fs.unlink(file.path);
-          
-          logger.info('File validated successfully', {
-            filename: file.originalname,
-            size: file.size,
-            mimeType: detectedMimeType || file.mimetype
-          });
+        const { isInfected, viruses } = await (await clamscan).scanFile(file.path);
+        
+        if (isInfected) {
+            return res.status(400).json({
+                status: 'error',
+                code: 'VIRUS_DETECTED',
+                message: 'File is infected with malware',
+                details: viruses
+            });
         }
 
         next();
-      } catch (error) {
-        // Clean up any temporary files if validation fails
-        if (req.tempFilePaths) {
-          await Promise.all(req.tempFilePaths.map(tempPath => 
-            fs.unlink(tempPath).catch(() => {})
-          ));
-        }
-        
-        logger.error('File validation failed', { 
-          error: error.message,
-          status: error.statusCode || 500
+    } catch (error) {
+        logger.error('Virus scan error:', error);
+        return res.status(500).json({
+            status: 'error',
+            code: 'SCAN_ERROR',
+            message: 'Error scanning file'
         });
-        
-        next(error);
-      }
-    };
-  }
+    }
+};
 
-  static cleanup() {
-    return async (req, res, next) => {
-      const cleanupTemp = async () => {
-        if (req.tempFilePaths) {
-          for (const tempPath of req.tempFilePaths) {
-            try {
-              // Use secureDelete for better security
-              await secureFileHandler.secureDelete(tempPath);
-            } catch (error) {
-              logger.warn(`Failed to securely delete temp file: ${tempPath}`, { error: error.message });
-            }
-          }
+// Multer upload configuration
+export const upload = multer({
+    storage,
+    limits: {
+        fileSize: config.maxFileSize
+    }
+});
+
+// File cleanup middleware
+export const cleanupFile = async (req, res, next) => {
+    const cleanup = () => {
+        if (req.file) {
+            fs.unlink(req.file.path).catch(err => {
+                logger.error('File cleanup error:', err);
+            });
         }
-      };
-
-      // Cleanup on response finish
-      res.on('finish', cleanupTemp);
-      
-      // Cleanup on error
-      res.on('error', cleanupTemp);
-
-      // Ensure cleanup on unhandled errors
-      res.on('close', cleanupTemp);
-
-      next();
     };
-  }
-}
 
-module.exports = FileValidationMiddleware;
+    res.on('finish', cleanup);
+    res.on('error', cleanup);
+    next();
+};
+
+export default {
+    upload,
+    validateFile,
+    scanFile,
+    cleanupFile
+};
