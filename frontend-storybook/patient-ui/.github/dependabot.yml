@@ -1,0 +1,70 @@
+version: 2
+updates:
+  # Enable version updates for npm
+  - package-ecosystem: "npm"
+    # Look for `package.json` and `lock` files in the `root` directory
+    directory: "/"
+    # Check for updates once a week
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    # Raise pull requests for version updates against the `develop` branch
+    target-branch: "develop"
+    # Labels on pull requests for version updates
+    labels:
+      - "dependencies"
+      - "npm"
+    # Specify assignees for pull requests
+    assignees:
+      - "[owner]"
+    # Group all updates together in one PR
+    groups:
+      # Group production dependencies
+      production-dependencies:
+        dependency-type: "production"
+        patterns:
+          - "*"
+      # Group development dependencies
+      development-dependencies:
+        dependency-type: "development"
+        patterns:
+          - "*"
+    # Configure version updating preferences
+    versioning-strategy: "auto"
+    # Limit number of open pull requests
+    open-pull-requests-limit: 10
+    # Add reviewers
+    reviewers:
+      - "[owner]"
+    commit-message:
+      prefix: "chore"
+      prefix-development: "chore"
+      include: "scope"
+
+  # Enable version updates for GitHub Actions
+  - package-ecosystem: "github-actions"
+    # Look for `.github/workflows` files in the `root` directory
+    directory: "/"
+    # Check for updates once a week
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "UTC"
+    # Raise pull requests for version updates against the `develop` branch
+    target-branch: "develop"
+    # Labels on pull requests for version updates
+    labels:
+      - "dependencies"
+      - "github-actions"
+    # Specify assignees for pull requests
+    assignees:
+      - "[owner]"
+    # Add reviewers
+    reviewers:
+      - "[owner]"
+    commit-message:
+      prefix: "ci"
+      include: "scope" 

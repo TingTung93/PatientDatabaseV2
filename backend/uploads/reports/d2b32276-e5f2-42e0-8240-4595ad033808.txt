@@ -1,0 +1,122 @@
+ 0067-BB                            P A T I E N T   T Y P I N G S   A N D   C O M M E N T S             Time:         08:22
+ 8901 Wisconsin Ave                                    (by Patient Name)                                As of Date:   17MAR25
+ Bethesda, MD  20889-5600
+                              Beginning Date: 17MAR25  00:00         Ending Date: 17MAR25  23:59
+ 
+ Facility: 0067A
+ 
+ 
+                                   Medical                                                  Transfusion
+             Name               Record Number    Birth Date       ABO/Rh       Phenotype    Requirements  Antibodies   Antigens
+ ----------------------------  ---------------  -------------  -------------  ------------  ------------  -----------  --------
+ <Not on File>                 <Not on File>    <Not on File>     <None>         <None>        <None>        <None>     <None>
+ 
+ SMITH, Marissa Josephine      47152592000001   22APR93 00:00     <None>         <None>        <None>        <None>     <None>
+ 
+                           * * * * * * * * * * * * * * * * Patient Comments * * * * * * * * * * * * * * * *
+                           >> MAR/17/25 08:21:00  RUTH.DALIDA.0001   HCLL Hx REVIEWED/ENTERED. No Hx
+ 
+ 
+ BELLE, Christel B M          32274713000001   31DEC51 00:00      B POS         <None>        <None>        <None>     <None>
+ 
+                           * * * * * * * * * * * * * * * * Patient Comments * * * * * * * * * * * * * * * *
+                           >> JUN/04/24 16:56:00  PETER.LE.0001   WRNMMC DataArk CHECKED
+ 
+ 
+ ALEXANDER, Erik Andrew           86940272000001   30JUN74 00:00      O POS         <None>        <None>        <None>     <None>
+ 
+ GRAHAM, Mikaya Yanee            20018414000001   15MAY94 00:00      A POS         <None>        <None>        <None>     <None>
+ 
+                           * * * * * * * * * * * * * * * * Patient Comments * * * * * * * * * * * * * * * *
+                           >> JAN/30/25 11:46:00  NIKKIMA.SUELO.0001   ATAMMC- No previous history in
+                           legacy system.
+ 
+ 
+ MELISSA, Filipina A          33111343000001   20JAN64 00:00      O POS         <None>        <None>        <None>     <None>
+ 
+                           * * * * * * * * * * * * * * * * Patient Comments * * * * * * * * * * * * * * * *
+                           >> MAR/17/25 07:35:00  ALEMAYE.DADI.0001   WRNMMC DataArk CHECKED
+ 
+ 
+ ODYSSEY, Brittany Lynn          2560272000001    13APR90 00:00      A POS         <None>        <None>        <None>     <None>
+ 
+                           * * * * * * * * * * * * * * * * Patient Comments * * * * * * * * * * * * * * * *
+                           >> MAR/17/25 07:16:00  NIKKIMA.SUELO.0001   ATAMMC- Previous history A POS/ABS
+                           NEG in legacy system.
+ 
+ 
+ ROSE, Rita Taye             18912706000001   07APR92 00:00      O POS         <None>        <None>        <None>     <None>
+ 
+                           * * * * * * * * * * * * * * * * Patient Comments * * * * * * * * * * * * * * * *
+                           >> AUG/19/24 15:28:00  EMILY.EZZELL.0001   WRNMMC DataArk VERIFIED
+ 
+                           >> AUG/19/24 12:07:00  ALEMAYE.DADI.0001   WRNMMC DataArk CHECKED
+ 
+ 
+ ARTHUR, Lacee Mikayla         16374994000001   14JUN00 00:00      O POS         <None>        <None>        <None>     <None>
+ 
+ _____________________________________________________________________________________________________________________________
+ Report ID: BBT_RPT_PAT_TYP_COM.PRG                         Page:  1                                   Printed: 17MAR25  08:22
+                                                                                                            By: PETER.LE.0
+ 
+ 0067-BB                            P A T I E N T   T Y P I N G S   A N D   C O M M E N T S             Time:         08:22
+ 8901 Wisconsin Ave                                    (by Patient Name)                                As of Date:   17MAR25
+ Bethesda, MD  20889-5600
+                              Beginning Date: 17MAR25  00:00         Ending Date: 17MAR25  23:59
+ 
+ Facility: 0067A
+ 
+ 
+                                   Medical                                                  Transfusion
+             Name               Record Number    Birth Date       ABO/Rh       Phenotype    Requirements  Antibodies   Antigens
+ ----------------------------  ---------------  -------------  -------------  ------------  ------------  -----------  --------
+                           * * * * * * * * * * * * * * * * Patient Comments * * * * * * * * * * * * * * * *
+                           >> MAR/17/25 07:51:00  ALEMAYE.DADI.0001   WRNMMC DataArk CHECKED
+ 
+ 
+ Murphy, AUDEY Catherine    34293519000001   07MAR14 00:00      A NEG         <None>        <None>        <None>     <None>
+ 
+                           * * * * * * * * * * * * * * * * Patient Comments * * * * * * * * * * * * * * * *
+                           >> MAR/12/25 07:57:00  ALEMAYE.DADI.0001   WRNMMC DataArk VERIFIED
+ 
+                           >> MAR/12/25 04:13:00  GERALD.REID.0001   WRNMMC DataArk CHECKED
+ 
+ 
+ Sok, BIG                   754998000001     03JAN85 00:00      A POS         <None>        <None>        <None>     <None>
+ 
+                           * * * * * * * * * * * * * * * * Patient Comments * * * * * * * * * * * * * * * *
+                           >> MAR/17/25 07:32:00  ALEMAYE.DADI.0001   WRNMMC DataArk CHECKED
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ _____________________________________________________________________________________________________________________________
+ Report ID: BBT_RPT_PAT_TYP_COM.PRG                         Page:  2                                   Printed: 17MAR25  08:22
+                                                                                                            By: PETER.LE.0
+                                                   * * * End of Report * * *

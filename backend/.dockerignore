@@ -1,0 +1,53 @@
+# Docker ignore file for backend
+
+# Node modules & package managers
+node_modules
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Git files
+.git
+.gitignore
+
+# Test files and coverage reports
+__tests__
+tests
+coverage
+.coverage
+test.sqlite
+junit.xml
+.nyc_output
+
+# Documentation
+*.md
+!README.md
+
+# Development files
+.vscode
+.idea
+*.log
+
+# Cache
+.npm
+.cache
+
+# OS specific files
+.DS_Store
+Thumbs.db
+
+# Python related (if using any Python components)
+__pycache__
+*.py[cod]
+*$py.class
+.pytest_cache
+venv
+
+# temp files
+tmp
+temp

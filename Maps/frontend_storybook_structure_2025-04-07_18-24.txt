@@ -1,0 +1,351 @@
+Folder map of i:\PatientDatabaseV2\frontend-storybook
+==================================================
+
+├── patient-ui/
+│   ├── .git_disabled/
+│   ├── .github/
+│   │   ├── workflows/
+│   │   │   └── lint.yml
+│   │   ├── dependabot.yml
+│   │   └── SECURITY.md
+│   ├── .husky/
+│   │   ├── _/
+│   │   │   ├── .gitignore
+│   │   │   ├── applypatch-msg
+│   │   │   ├── commit-msg
+│   │   │   ├── h
+│   │   │   ├── husky.sh
+│   │   │   ├── post-applypatch
+│   │   │   ├── post-checkout
+│   │   │   ├── post-commit
+│   │   │   ├── post-merge
+│   │   │   ├── post-rewrite
+│   │   │   ├── pre-applypatch
+│   │   │   ├── pre-auto-gc
+│   │   │   ├── pre-commit
+│   │   │   ├── pre-merge-commit
+│   │   │   ├── pre-push
+│   │   │   ├── pre-rebase
+│   │   │   └── prepare-commit-msg
+│   │   └── pre-commit
+│   ├── .storybook/
+│   │   ├── main.ts
+│   │   ├── preview.tsx
+│   │   └── test-runner.ts
+│   ├── build/
+│   ├── cypress/
+│   │   ├── e2e/
+│   │   │   ├── ocr-visual.cy.ts
+│   │   │   └── ocr-workflow.cy.ts
+│   │   └── support/
+│   │       └── websocket.ts
+│   ├── node_modules/
+│   ├── public/
+│   │   ├── favicon.ico
+│   │   ├── index.html
+│   │   ├── logo192.png
+│   │   ├── logo512.png
+│   │   ├── manifest.json
+│   │   └── robots.txt
+│   ├── src/
+│   │   ├── api/
+│   │   │   ├── __tests__/
+│   │   │   │   ├── ocrApi.contract.test.ts
+│   │   │   │   └── ocrService.test.ts
+│   │   │   ├── endpoints/
+│   │   │   │   ├── cautionCardApi.ts
+│   │   │   │   ├── patientApi.ts
+│   │   │   │   ├── patients.ts
+│   │   │   │   └── reportApi.ts
+│   │   │   ├── websocket/
+│   │   │   │   ├── event-client.ts
+│   │   │   │   └── event-types.ts
+│   │   │   ├── apiClient.ts
+│   │   │   ├── cautionCardService.ts
+│   │   │   ├── client.ts
+│   │   │   ├── patientService.ts
+│   │   │   ├── reports.ts
+│   │   │   ├── reportService.ts
+│   │   │   ├── searchService.ts
+│   │   │   └── uploadService.ts
+│   │   ├── components/
+│   │   │   ├── auth/
+│   │   │   │   └── ProtectedRoute.tsx
+│   │   │   ├── caution-cards/
+│   │   │   │   ├── __tests__/
+│   │   │   │   │   └── CautionCardUpload.test.tsx
+│   │   │   │   ├── CautionCard.tsx
+│   │   │   │   ├── CautionCardBatch.tsx
+│   │   │   │   ├── CautionCardDetails.tsx
+│   │   │   │   ├── CautionCardEdit.tsx
+│   │   │   │   ├── CautionCardEditModal.tsx
+│   │   │   │   ├── CautionCardExport.tsx
+│   │   │   │   ├── CautionCardFilter.tsx
+│   │   │   │   ├── CautionCardImport.tsx
+│   │   │   │   ├── CautionCardList.tsx
+│   │   │   │   ├── CautionCardReview.tsx
+│   │   │   │   ├── CautionCardStats.tsx
+│   │   │   │   ├── CautionCardUpload.tsx
+│   │   │   │   ├── CautionCardUploadModal.tsx
+│   │   │   │   ├── LinkCardModal.tsx
+│   │   │   │   ├── LinkCardToPatientModal.tsx
+│   │   │   │   └── OrphanedCautionCards.tsx
+│   │   │   ├── common/
+│   │   │   │   ├── __tests__/
+│   │   │   │   │   ├── ErrorBoundary.test.tsx
+│   │   │   │   │   ├── FileUploadUI.test.tsx
+│   │   │   │   │   └── LoadingSpinner.test.tsx
+│   │   │   │   ├── Button.tsx
+│   │   │   │   ├── Card.tsx
+│   │   │   │   ├── ConfirmationModal.tsx
+│   │   │   │   ├── ErrorBoundary.tsx
+│   │   │   │   ├── ErrorMessage.tsx
+│   │   │   │   ├── FallbackError.tsx
+│   │   │   │   ├── FileUploadUI.tsx
+│   │   │   │   ├── index.ts
+│   │   │   │   ├── Input.tsx
+│   │   │   │   ├── Layout.tsx
+│   │   │   │   ├── LoadingSkeleton.tsx
+│   │   │   │   ├── LoadingSpinner.tsx
+│   │   │   │   ├── Modal.tsx
+│   │   │   │   ├── Pagination.tsx
+│   │   │   │   ├── Progress.tsx
+│   │   │   │   ├── Select.tsx
+│   │   │   │   ├── Sidebar.tsx
+│   │   │   │   ├── Spin.tsx
+│   │   │   │   ├── Tabs.tsx
+│   │   │   │   ├── Tag.tsx
+│   │   │   │   ├── Toast.tsx
+│   │   │   │   ├── Tooltip.tsx
+│   │   │   │   ├── TopBar.tsx
+│   │   │   │   └── withErrorBoundary.tsx
+│   │   │   ├── ocr/
+│   │   │   │   ├── __tests__/
+│   │   │   │   │   ├── OcrResult.test.tsx
+│   │   │   │   │   ├── OcrUpload.test.tsx
+│   │   │   │   │   └── OcrWorkflow.test.tsx
+│   │   │   │   ├── OCRContainer.tsx
+│   │   │   │   ├── OcrError.tsx
+│   │   │   │   ├── OcrResult.tsx
+│   │   │   │   ├── OCRResults.tsx
+│   │   │   │   ├── OcrResultsList.tsx
+│   │   │   │   └── OcrUpload.tsx
+│   │   │   ├── patient/
+│   │   │   │   ├── __tests__/
+│   │   │   │   │   ├── PatientForm.test.tsx
+│   │   │   │   │   ├── PatientManagement.test.tsx
+│   │   │   │   │   └── ReportManagement.test.tsx
+│   │   │   │   ├── form-sections/
+│   │   │   │   │   ├── BloodProfileFormSection.tsx
+│   │   │   │   │   ├── DemographicsFormSection.tsx
+│   │   │   │   │   ├── IdentificationFormSection.tsx
+│   │   │   │   │   ├── MedicalHistoryFormSection.tsx
+│   │   │   │   │   └── PhenotypeCheckboxGroup.tsx
+│   │   │   │   ├── CautionCard.stories.tsx
+│   │   │   │   ├── CautionCard.tsx
+│   │   │   │   ├── CautionCardManagement.tsx
+│   │   │   │   ├── CautionCardUpload.stories.tsx
+│   │   │   │   ├── CautionCardUpload.tsx
+│   │   │   │   ├── OrphanedCautionCards.tsx
+│   │   │   │   ├── PatientCard.tsx
+│   │   │   │   ├── PatientForm.stories.tsx
+│   │   │   │   ├── PatientForm.tsx
+│   │   │   │   ├── PatientManagement.stories.tsx
+│   │   │   │   ├── PatientManagement.tsx
+│   │   │   │   ├── PatientSearch.stories.tsx
+│   │   │   │   ├── PatientSearch.tsx
+│   │   │   │   ├── ReportDetails.stories.tsx
+│   │   │   │   ├── ReportDetails.tsx
+│   │   │   │   └── ReportManagement.tsx
+│   │   │   ├── patients/
+│   │   │   │   ├── AntibodyInput.stories.tsx
+│   │   │   │   ├── AntibodyInput.tsx
+│   │   │   │   ├── PatientCautionCardList.stories.tsx
+│   │   │   │   ├── PatientCautionCardList.tsx
+│   │   │   │   ├── PatientListItem.tsx
+│   │   │   │   ├── PatientReportsList.stories.tsx
+│   │   │   │   ├── PatientReportsList.tsx
+│   │   │   │   ├── PhenotypeInputGrid.tsx
+│   │   │   │   └── VirtualizedPatientList.tsx
+│   │   │   ├── reports/
+│   │   │   │   ├── ReportAttachments.tsx
+│   │   │   │   ├── ReportCard.tsx
+│   │   │   │   ├── ReportFilterControls.tsx
+│   │   │   │   ├── ReportForm.tsx
+│   │   │   │   ├── ReportList.tsx
+│   │   │   │   ├── ReportModal.tsx
+│   │   │   │   ├── ReportUploadModal.tsx
+│   │   │   │   └── ReportView.tsx
+│   │   │   ├── search/
+│   │   │   │   ├── FilterBar.tsx
+│   │   │   │   ├── GlobalSearch.tsx
+│   │   │   │   └── SearchBar.tsx
+│   │   │   ├── AntibodyDisplay.tsx
+│   │   │   ├── AntibodyInput.tsx
+│   │   │   ├── ConfirmationModal.tsx
+│   │   │   ├── DataField.tsx
+│   │   │   ├── Pagination.tsx
+│   │   │   ├── PhenotypeDisplay.tsx
+│   │   │   ├── PhenotypeInputGrid.tsx
+│   │   │   └── VirtualizedPatientList.tsx
+│   │   ├── config/
+│   │   │   ├── environment.ts
+│   │   │   └── fileUploadConfig.ts
+│   │   ├── context/
+│   │   │   ├── __tests__/
+│   │   │   │   └── AuthContext.test.tsx
+│   │   │   ├── AuthContext.tsx
+│   │   │   ├── ToastContext.tsx
+│   │   │   └── WebSocketContext.tsx
+│   │   ├── hooks/
+│   │   │   ├── __tests__/
+│   │   │   │   ├── useOcr.test.tsx
+│   │   │   │   └── usePatients.test.tsx
+│   │   │   ├── useCautionCards.ts
+│   │   │   ├── useDebounce.ts
+│   │   │   ├── useGlobalSearch.ts
+│   │   │   ├── useOcr.ts
+│   │   │   ├── usePatientFilters.ts
+│   │   │   ├── usePatients.ts
+│   │   │   ├── useReports.ts
+│   │   │   ├── useTextAnalysis.ts
+│   │   │   └── useUrlPagination.ts
+│   │   ├── integration-tests/
+│   │   │   ├── CautionCardWorkflow.test.tsx
+│   │   │   └── PatientReportWorkflow.test.tsx
+│   │   ├── mocks/
+│   │   │   └── cautionCardMocks.ts
+│   │   ├── pages/
+│   │   │   ├── __tests__/
+│   │   │   │   └── PatientFormPage.integration.test.tsx
+│   │   │   ├── CautionCardsPage.tsx
+│   │   │   ├── LoginPage.tsx
+│   │   │   ├── OcrPage.tsx
+│   │   │   ├── PatientDetailPage.tsx
+│   │   │   ├── PatientFormPage.tsx
+│   │   │   ├── PatientReportsPage.tsx
+│   │   │   ├── PatientsPage.tsx
+│   │   │   └── ReportsPage.tsx
+│   │   ├── services/
+│   │   │   ├── __tests__/
+│   │   │   │   ├── authService.test.ts
+│   │   │   │   ├── cautionCardService.test.ts
+│   │   │   │   ├── FileUploadService.test.ts
+│   │   │   │   ├── FileValidationService.test.ts
+│   │   │   │   ├── ocrService.test.ts
+│   │   │   │   ├── patientService.test.ts
+│   │   │   │   ├── textAnalysisService.test.ts
+│   │   │   │   └── websocketService.test.ts
+│   │   │   ├── apiClient.ts
+│   │   │   ├── authService.ts
+│   │   │   ├── cautionCardService.ts
+│   │   │   ├── ConfigService.ts
+│   │   │   ├── errorReportingService.ts
+│   │   │   ├── FileUploadService.ts
+│   │   │   ├── FileValidationService.ts
+│   │   │   ├── ocrService.ts
+│   │   │   ├── patientService.ts
+│   │   │   ├── reportService.ts
+│   │   │   ├── textAnalysisService.ts
+│   │   │   └── websocketService.ts
+│   │   ├── stories/
+│   │   │   ├── assets/
+│   │   │   │   ├── accessibility.png
+│   │   │   │   ├── accessibility.svg
+│   │   │   │   ├── addon-library.png
+│   │   │   │   ├── assets.png
+│   │   │   │   ├── avif-test-image.avif
+│   │   │   │   ├── context.png
+│   │   │   │   ├── discord.svg
+│   │   │   │   ├── docs.png
+│   │   │   │   ├── figma-plugin.png
+│   │   │   │   ├── github.svg
+│   │   │   │   ├── share.png
+│   │   │   │   ├── styling.png
+│   │   │   │   ├── testing.png
+│   │   │   │   ├── theming.png
+│   │   │   │   ├── tutorials.svg
+│   │   │   │   └── youtube.svg
+│   │   │   ├── caution-cards/
+│   │   │   │   ├── CautionCardBatch.stories.tsx
+│   │   │   │   ├── CautionCardEditModal.stories.tsx
+│   │   │   │   ├── CautionCardImport.stories.tsx
+│   │   │   │   ├── CautionCardReview.stories.tsx
+│   │   │   │   ├── CautionCardStats.stories.tsx
+│   │   │   │   └── OrphanedCautionCards.stories.tsx
+│   │   │   ├── ocr/
+│   │   │   │   ├── OcrPage.stories.tsx
+│   │   │   │   ├── OcrResult.stories.tsx
+│   │   │   │   ├── OcrResultsList.stories.tsx
+│   │   │   │   └── OcrUpload.stories.tsx
+│   │   │   ├── button.css
+│   │   │   ├── Button.stories.ts
+│   │   │   ├── Button.stories.tsx
+│   │   │   ├── Button.tsx
+│   │   │   ├── Card.stories.tsx
+│   │   │   ├── CautionCard.stories.tsx
+│   │   │   ├── CautionCardManagement.stories.tsx
+│   │   │   ├── CautionCardsPage.stories.tsx
+│   │   │   ├── CautionCardUpload.stories.tsx
+│   │   │   ├── Configure.mdx
+│   │   │   ├── header.css
+│   │   │   ├── Header.stories.ts
+│   │   │   ├── Header.tsx
+│   │   │   ├── Input.stories.tsx
+│   │   │   ├── OcrError.stories.tsx
+│   │   │   ├── OcrResult.stories.tsx
+│   │   │   ├── page.css
+│   │   │   ├── Page.stories.ts
+│   │   │   ├── Page.tsx
+│   │   │   ├── PatientCard.stories.tsx
+│   │   │   ├── PatientPages.stories.tsx
+│   │   │   ├── PatientReportManagement.stories.tsx
+│   │   │   ├── PatientReportsPage.stories.tsx
+│   │   │   └── ReportAttachments.stories.tsx
+│   │   ├── test-utils/
+│   │   │   ├── README.md
+│   │   │   └── test-helpers.ts
+│   │   ├── types/
+│   │   │   ├── blood.ts
+│   │   │   ├── cautionCard.ts
+│   │   │   ├── common.ts
+│   │   │   ├── ocr.ts
+│   │   │   ├── patient.ts
+│   │   │   ├── report.ts
+│   │   │   ├── reports.ts
+│   │   │   └── textAnalysis.ts
+│   │   ├── utils/
+│   │   │   ├── dateUtils.ts
+│   │   │   └── toast.ts
+│   │   ├── validation/
+│   │   │   └── patientValidationSchema.ts
+│   │   ├── App.css
+│   │   ├── App.test.tsx
+│   │   ├── App.tsx
+│   │   ├── index.css
+│   │   ├── index.tsx
+│   │   ├── logo.svg
+│   │   ├── react-app-env.d.ts
+│   │   ├── reportWebVitals.ts
+│   │   ├── setupTests.ts
+│   │   └── theme.ts
+│   ├── .env
+│   ├── .env.development
+│   ├── .eslintignore
+│   ├── .eslintrc.json
+│   ├── .gitignore
+│   ├── .prettierrc
+│   ├── API_DOCUMENTATION.md
+│   ├── Doc0010.png
+│   ├── EXAMPLEREPORT.txt
+│   ├── FRONTEND_INTEGRATION.md
+│   ├── frontenderrors.txt
+│   ├── package-lock.json
+│   ├── package.json
+│   ├── postcss.config.cjs
+│   ├── README.md
+│   ├── tailwind.config.js
+│   ├── tasks.md
+│   ├── tsconfig.eslint.json
+│   └── tsconfig.json
+└── implementation-plan.md

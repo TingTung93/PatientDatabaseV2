@@ -1,0 +1,10 @@
+feat: enhance environment configuration and integrate styled-components
+
+- Updated .env file to include new API and WebSocket configurations.
+- Added styled-components and its TypeScript types to package.json and package-lock.json.
+- Refactored App component to utilize styled-components ThemeProvider alongside MUI ThemeProvider for improved styling management.
+- Adjusted API client to log the active API URL and ensure consistent usage of environment variables.
+- Enhanced error handling in caution card components and updated hooks for better data management.
+- Improved caution card upload functionality with better validation and error handling.
+
+[Related changes: CautionCardBatch, CautionCardUpload, CautionCardUploadModal, and various service files]

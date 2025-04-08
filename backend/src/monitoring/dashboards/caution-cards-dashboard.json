@@ -1,0 +1,165 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "gnetId": null,
+  "graphTooltip": 0,
+  "id": 1,
+  "links": [],
+  "panels": [
+    {
+      "title": "Upload Performance",
+      "type": "row",
+      "panels": [
+        {
+          "title": "Upload Success Rate",
+          "type": "gauge",
+          "datasource": "Prometheus",
+          "targets": [
+            {
+              "expr": "sum(rate(caution_card_upload_attempts_total{status=\"success\"}[5m])) / sum(rate(caution_card_upload_attempts_total[5m])) * 100",
+              "legendFormat": "Success Rate"
+            }
+          ],
+          "thresholds": [
+            { "value": null, "color": "red" },
+            { "value": 90, "color": "yellow" },
+            { "value": 95, "color": "green" }
+          ]
+        },
+        {
+          "title": "Upload Duration",
+          "type": "graph",
+          "datasource": "Prometheus",
+          "targets": [
+            {
+              "expr": "rate(caution_card_upload_duration_seconds_sum[5m]) / rate(caution_card_upload_duration_seconds_count[5m])",
+              "legendFormat": "Average Duration"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "OCR Performance",
+      "type": "row",
+      "panels": [
+        {
+          "title": "OCR Accuracy",
+          "type": "gauge",
+          "datasource": "Prometheus",
+          "targets": [
+            {
+              "expr": "avg(caution_card_ocr_accuracy_score) * 100",
+              "legendFormat": "Average Accuracy"
+            }
+          ],
+          "thresholds": [
+            { "value": null, "color": "red" },
+            { "value": 80, "color": "yellow" },
+            { "value": 90, "color": "green" }
+          ]
+        },
+        {
+          "title": "OCR Processing Time",
+          "type": "graph",
+          "datasource": "Prometheus",
+          "targets": [
+            {
+              "expr": "rate(caution_card_ocr_processing_seconds_sum[5m]) / rate(caution_card_ocr_processing_seconds_count[5m])",
+              "legendFormat": "Average Processing Time"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "System Resources",
+      "type": "row",
+      "panels": [
+        {
+          "title": "Disk Usage",
+          "type": "gauge",
+          "datasource": "Prometheus",
+          "targets": [
+            {
+              "expr": "caution_card_disk_usage_bytes / 1024 / 1024",
+              "legendFormat": "Disk Usage (MB)"
+            }
+          ],
+          "thresholds": [
+            { "value": null, "color": "green" },
+            { "value": 70, "color": "yellow" },
+            { "value": 85, "color": "red" }
+          ]
+        },
+        {
+          "title": "Memory Usage",
+          "type": "graph",
+          "datasource": "Prometheus",
+          "targets": [
+            {
+              "expr": "caution_card_memory_usage_bytes / 1024 / 1024",
+              "legendFormat": "Memory Usage (MB)"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Error Tracking",
+      "type": "row",
+      "panels": [
+        {
+          "title": "Error Rate",
+          "type": "graph",
+          "datasource": "Prometheus",
+          "targets": [
+            {
+              "expr": "sum(rate(caution_card_errors_total[5m])) by (type)",
+              "legendFormat": "{{type}}"
+            }
+          ]
+        },
+        {
+          "title": "WebSocket Connections",
+          "type": "stat",
+          "datasource": "Prometheus",
+          "targets": [
+            {
+              "expr": "caution_card_websocket_connections",
+              "legendFormat": "Active Connections"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 26,
+  "style": "dark",
+  "tags": ["caution-cards"],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Caution Cards Monitoring",
+  "uid": "caution-cards-dashboard",
+  "version": 1
+}

@@ -1,0 +1,5 @@
+0000000000000000000000000000000000000000 71175256bf9233bdddcbf05cb78f52dd43d7c994 danangboy13@gmail.com <danangboy13@gmail.com> 1743777134 -0400	commit (initial): Initialize project using Create React App
+71175256bf9233bdddcbf05cb78f52dd43d7c994 b96c2f15f68f3a5bfd73c05c4b0d008b27832cb6 danangboy13@gmail.com <danangboy13@gmail.com> 1743983958 -0400	commit: feat: integrate React Query and Storybook, update dependencies
+b96c2f15f68f3a5bfd73c05c4b0d008b27832cb6 14b14ce154e540161a6da2d6e036ec44d83be94f danangboy13@gmail.com <danangboy13@gmail.com> 1743997753 -0400	commit: chore: remove implementation plan and update dependencies
+14b14ce154e540161a6da2d6e036ec44d83be94f 8eaff46e0e1d3a13a0e182c8507c373c907df32c danangboy13@gmail.com <danangboy13@gmail.com> 1744045408 -0400	commit: chore: update configuration files and improve type safety
+8eaff46e0e1d3a13a0e182c8507c373c907df32c 50a4564d75b5c7de0c95ef141c335c5febd8e931 danangboy13@gmail.com <danangboy13@gmail.com> 1744132442 -0400	commit: feat: enhance environment configuration and integrate styled-components

@@ -1,0 +1,772 @@
+{
+    "template_dimensions": {
+        "width": 2416,
+        "height": 1552
+    },
+    "reference_dimensions": {
+        "width": 1300,
+        "height": 850
+    },
+    "regions": {
+        "patient_name": {
+            "name": "Patient Name",
+            "x": 41,
+            "y": 3,
+            "width": 952,
+            "height": 142,
+            "is_checkbox": false
+        },
+        "fmp_ssn": {
+            "name": "FMP/SSN",
+            "x": 990,
+            "y": 0,
+            "width": 919,
+            "height": 162,
+            "is_checkbox": false
+        },
+        "abo_rh": {
+            "name": "ABO/Rh",
+            "x": 1908,
+            "y": 0,
+            "width": 414,
+            "height": 150,
+            "is_checkbox": false
+        },
+        "rh_D": {
+            "name": "D",
+            "x": 57,
+            "y": 334,
+            "width": 99,
+            "height": 56,
+            "is_checkbox": false
+        },
+        "rh_C": {
+            "name": "C",
+            "x": 171,
+            "y": 333,
+            "width": 99,
+            "height": 56,
+            "is_checkbox": false
+        },
+        "rh_E": {
+            "name": "E",
+            "x": 301,
+            "y": 338,
+            "width": 99,
+            "height": 56,
+            "is_checkbox": false
+        },
+        "rh_c": {
+            "name": "c",
+            "x": 428,
+            "y": 336,
+            "width": 99,
+            "height": 56,
+            "is_checkbox": false
+        },
+        "rh_e": {
+            "name": "e",
+            "x": 550,
+            "y": 335,
+            "width": 99,
+            "height": 56,
+            "is_checkbox": false
+        },
+        "kell_K": {
+            "name": "K",
+            "x": 654,
+            "y": 336,
+            "width": 99,
+            "height": 56,
+            "is_checkbox": false
+        },
+        "kell_k": {
+            "name": "k",
+            "x": 759,
+            "y": 338,
+            "width": 99,
+            "height": 56,
+            "is_checkbox": false
+        },
+        "duffy_Fya": {
+            "name": "Fya",
+            "x": 873,
+            "y": 340,
+            "width": 99,
+            "height": 56,
+            "is_checkbox": false
+        },
+        "duffy_Fyb": {
+            "name": "Fyb",
+            "x": 1004,
+            "y": 340,
+            "width": 99,
+            "height": 56,
+            "is_checkbox": false
+        },
+        "kidd_Jka": {
+            "name": "Jka",
+            "x": 1130,
+            "y": 337,
+            "width": 99,
+            "height": 56,
+            "is_checkbox": false
+        },
+        "mns_N": {
+            "name": "N",
+            "x": 1480,
+            "y": 341,
+            "width": 99,
+            "height": 56,
+            "is_checkbox": false
+        },
+        "mns_S": {
+            "name": "S",
+            "x": 1572,
+            "y": 339,
+            "width": 99,
+            "height": 56,
+            "is_checkbox": false
+        },
+        "mns_s": {
+            "name": "s",
+            "x": 1669,
+            "y": 343,
+            "width": 99,
+            "height": 56,
+            "is_checkbox": false
+        },
+        "date_row_1": {
+            "name": "Date Row 1",
+            "x": 62,
+            "y": 531,
+            "width": 275,
+            "height": 131,
+            "is_checkbox": false
+        },
+        "pos_screen_1": {
+            "name": "Pos Screen 1",
+            "x": 331,
+            "y": 537,
+            "width": 37,
+            "height": 36,
+            "is_checkbox": true
+        },
+        "pos_dat_1": {
+            "name": "Pos DAT 1",
+            "x": 334,
+            "y": 570,
+            "width": 37,
+            "height": 36,
+            "is_checkbox": true
+        },
+        "sickle_cell_1": {
+            "name": "Sickle Cell 1",
+            "x": 333,
+            "y": 614,
+            "width": 37,
+            "height": 36,
+            "is_checkbox": true
+        },
+        "restriction_1": {
+            "name": "Restriction 1",
+            "x": 1378,
+            "y": 530,
+            "width": 371,
+            "height": 131,
+            "is_checkbox": false
+        },
+        "crossmatch_1": {
+            "name": "Crossmatch 1",
+            "x": 1857,
+            "y": 521,
+            "width": 260,
+            "height": 131,
+            "is_checkbox": false
+        },
+        "imm_spin_1": {
+            "name": "Imm Spin 1",
+            "x": 1771,
+            "y": 536,
+            "width": 37,
+            "height": 36,
+            "is_checkbox": true
+        },
+        "sal_ahg_1": {
+            "name": "Sal-AHG 1",
+            "x": 1764,
+            "y": 579,
+            "width": 37,
+            "height": 36,
+            "is_checkbox": true
+        },
+        "pre_warm_1": {
+            "name": "Pre-Warm 1",
+            "x": 1770,
+            "y": 623,
+            "width": 37,
+            "height": 36,
+            "is_checkbox": true
+        },
+        "tech_1": {
+            "name": "tech_1",
+            "x": 2119,
+            "y": 538,
+            "width": 177,
+            "height": 105,
+            "is_checkbox": false
+        },
+        "tech_2": {
+            "name": "tech_2",
+            "x": 2124,
+            "y": 666,
+            "width": 176,
+            "height": 112,
+            "is_checkbox": false
+        },
+        "tech_3": {
+            "name": "tech_3",
+            "x": 2122,
+            "y": 798,
+            "width": 179,
+            "height": 99,
+            "is_checkbox": false
+        },
+        "tech_4": {
+            "name": "tech_4",
+            "x": 2121,
+            "y": 918,
+            "width": 174,
+            "height": 105,
+            "is_checkbox": false
+        },
+        "tech_5": {
+            "name": "tech_5",
+            "x": 2117,
+            "y": 1046,
+            "width": 181,
+            "height": 105,
+            "is_checkbox": false
+        },
+        "tech_6": {
+            "name": "tech_6",
+            "x": 2124,
+            "y": 1169,
+            "width": 176,
+            "height": 117,
+            "is_checkbox": false
+        },
+        "tech_7": {
+            "name": "tech_7",
+            "x": 2119,
+            "y": 1289,
+            "width": 183,
+            "height": 119,
+            "is_checkbox": false
+        },
+        "tech_8": {
+            "name": "tech_8",
+            "x": 2323,
+            "y": 1415,
+            "width": 74,
+            "height": 36,
+            "is_checkbox": false
+        },
+        "tech_9": {
+            "name": "tech_9",
+            "x": 2319,
+            "y": 1490,
+            "width": 74,
+            "height": 36,
+            "is_checkbox": false
+        },
+        "date_row_2": {
+            "name": "Date Row 2",
+            "x": 64,
+            "y": 644,
+            "width": 275,
+            "height": 131,
+            "is_checkbox": false
+        },
+        "pos_screen_2": {
+            "name": "Pos Screen 2",
+            "x": 333,
+            "y": 666,
+            "width": 37,
+            "height": 36,
+            "is_checkbox": true
+        },
+        "pos_dat_2": {
+            "name": "Pos DAT 2",
+            "x": 335,
+            "y": 700,
+            "width": 37,
+            "height": 36,
+            "is_checkbox": true
+        },
+        "sickle_cell_2": {
+            "name": "Sickle Cell 2",
+            "x": 331,
+            "y": 739,
+            "width": 37,
+            "height": 36,
+            "is_checkbox": true
+        },
+        "restriction_2": {
+            "name": "Restriction 2",
+            "x": 1374,
+            "y": 666,
+            "width": 371,
+            "height": 131,
+            "is_checkbox": false
+        },
+        "crossmatch_2": {
+            "name": "Crossmatch 2",
+            "x": 1860,
+            "y": 652,
+            "width": 260,
+            "height": 131,
+            "is_checkbox": false
+        },
+        "imm_spin_2": {
+            "name": "Imm Spin 2",
+            "x": 1771,
+            "y": 666,
+            "width": 37,
+            "height": 36,
+            "is_checkbox": true
+        },
+        "sal_ahg_2": {
+            "name": "Sal-AHG 2",
+            "x": 1771,
+            "y": 703,
+            "width": 37,
+            "height": 36,
+            "is_checkbox": true
+        },
+        "pre_warm_2": {
+            "name": "Pre-Warm 2",
+            "x": 1769,
+            "y": 741,
+            "width": 37,
+            "height": 36,
+            "is_checkbox": true
+        },
+        "date_row_3": {
+            "name": "Date Row 3",
+            "x": 59,
+            "y": 768,
+            "width": 275,
+            "height": 131,
+            "is_checkbox": false
+        },
+        "pos_screen_3": {
+            "name": "Pos Screen 3",
+            "x": 335,
+            "y": 787,
+            "width": 37,
+            "height": 36,
+            "is_checkbox": true
+        },
+        "pos_dat_3": {
+            "name": "Pos DAT 3",
+            "x": 332,
+            "y": 830,
+            "width": 37,
+            "height": 36,
+            "is_checkbox": true
+        },
+        "sickle_cell_3": {
+            "name": "Sickle Cell 3",
+            "x": 331,
+            "y": 873,
+            "width": 37,
+            "height": 36,
+            "is_checkbox": true
+        },
+        "restriction_3": {
+            "name": "Restriction 3",
+            "x": 1370,
+            "y": 786,
+            "width": 371,
+            "height": 131,
+            "is_checkbox": false
+        },
+        "crossmatch_3": {
+            "name": "Crossmatch 3",
+            "x": 1855,
+            "y": 784,
+            "width": 260,
+            "height": 131,
+            "is_checkbox": false
+        },
+        "imm_spin_3": {
+            "name": "Imm Spin 3",
+            "x": 1769,
+            "y": 791,
+            "width": 37,
+            "height": 36,
+            "is_checkbox": true
+        },
+        "sal_ahg_3": {
+            "name": "Sal-AHG 3",
+            "x": 1772,
+            "y": 835,
+            "width": 37,
+            "height": 36,
+            "is_checkbox": true
+        },
+        "pre_warm_3": {
+            "name": "Pre-Warm 3",
+            "x": 1768,
+            "y": 872,
+            "width": 37,
+            "height": 36,
+            "is_checkbox": true
+        },
+        "date_row_4": {
+            "name": "Date Row 4",
+            "x": 60,
+            "y": 905,
+            "width": 275,
+            "height": 131,
+            "is_checkbox": false
+        },
+        "pos_screen_4": {
+            "name": "Pos Screen 4",
+            "x": 333,
+            "y": 911,
+            "width": 37,
+            "height": 36,
+            "is_checkbox": true
+        },
+        "pos_dat_4": {
+            "name": "Pos DAT 4",
+            "x": 330,
+            "y": 954,
+            "width": 37,
+            "height": 36,
+            "is_checkbox": true
+        },
+        "sickle_cell_4": {
+            "name": "Sickle Cell 4",
+            "x": 331,
+            "y": 995,
+            "width": 37,
+            "height": 36,
+            "is_checkbox": true
+        },
+        "restriction_4": {
+            "name": "Restriction 4",
+            "x": 1368,
+            "y": 907,
+            "width": 371,
+            "height": 131,
+            "is_checkbox": false
+        },
+        "crossmatch_4": {
+            "name": "Crossmatch 4",
+            "x": 1858,
+            "y": 914,
+            "width": 260,
+            "height": 131,
+            "is_checkbox": false
+        },
+        "imm_spin_4": {
+            "name": "Imm Spin 4",
+            "x": 1773,
+            "y": 914,
+            "width": 37,
+            "height": 36,
+            "is_checkbox": true
+        },
+        "sal_ahg_4": {
+            "name": "Sal-AHG 4",
+            "x": 1769,
+            "y": 960,
+            "width": 37,
+            "height": 36,
+            "is_checkbox": true
+        },
+        "pre_warm_4": {
+            "name": "Pre-Warm 4",
+            "x": 1771,
+            "y": 996,
+            "width": 37,
+            "height": 36,
+            "is_checkbox": true
+        },
+        "date_row_5": {
+            "name": "Date Row 5",
+            "x": 60,
+            "y": 1028,
+            "width": 275,
+            "height": 131,
+            "is_checkbox": false
+        },
+        "pos_screen_5": {
+            "name": "Pos Screen 5",
+            "x": 332,
+            "y": 1037,
+            "width": 37,
+            "height": 36,
+            "is_checkbox": true
+        },
+        "pos_dat_5": {
+            "name": "Pos DAT 5",
+            "x": 331,
+            "y": 1077,
+            "width": 37,
+            "height": 36,
+            "is_checkbox": true
+        },
+        "sickle_cell_5": {
+            "name": "Sickle Cell 5",
+            "x": 332,
+            "y": 1118,
+            "width": 37,
+            "height": 36,
+            "is_checkbox": true
+        },
+        "restriction_5": {
+            "name": "Restriction 5",
+            "x": 1375,
+            "y": 1041,
+            "width": 371,
+            "height": 131,
+            "is_checkbox": false
+        },
+        "crossmatch_5": {
+            "name": "Crossmatch 5",
+            "x": 1855,
+            "y": 1028,
+            "width": 260,
+            "height": 131,
+            "is_checkbox": false
+        },
+        "imm_spin_5": {
+            "name": "Imm Spin 5",
+            "x": 1771,
+            "y": 1040,
+            "width": 37,
+            "height": 36,
+            "is_checkbox": true
+        },
+        "sal_ahg_5": {
+            "name": "Sal-AHG 5",
+            "x": 1771,
+            "y": 1085,
+            "width": 37,
+            "height": 36,
+            "is_checkbox": true
+        },
+        "pre_warm_5": {
+            "name": "Pre-Warm 5",
+            "x": 1765,
+            "y": 1127,
+            "width": 37,
+            "height": 36,
+            "is_checkbox": true
+        },
+        "date_row_6": {
+            "name": "Date Row 6",
+            "x": 56,
+            "y": 1157,
+            "width": 275,
+            "height": 131,
+            "is_checkbox": false
+        },
+        "pos_screen_6": {
+            "name": "Pos Screen 6",
+            "x": 330,
+            "y": 1167,
+            "width": 37,
+            "height": 36,
+            "is_checkbox": true
+        },
+        "pos_dat_6": {
+            "name": "Pos DAT 6",
+            "x": 332,
+            "y": 1203,
+            "width": 37,
+            "height": 36,
+            "is_checkbox": true
+        },
+        "sickle_cell_6": {
+            "name": "Sickle Cell 6",
+            "x": 335,
+            "y": 1248,
+            "width": 37,
+            "height": 36,
+            "is_checkbox": true
+        },
+        "restriction_6": {
+            "name": "Restriction 6",
+            "x": 1381,
+            "y": 1162,
+            "width": 371,
+            "height": 131,
+            "is_checkbox": false
+        },
+        "crossmatch_6": {
+            "name": "Crossmatch 6",
+            "x": 1859,
+            "y": 1160,
+            "width": 260,
+            "height": 131,
+            "is_checkbox": false
+        },
+        "imm_spin_6": {
+            "name": "Imm Spin 6",
+            "x": 1766,
+            "y": 1165,
+            "width": 37,
+            "height": 36,
+            "is_checkbox": true
+        },
+        "sal_ahg_6": {
+            "name": "Sal-AHG 6",
+            "x": 1772,
+            "y": 1213,
+            "width": 37,
+            "height": 36,
+            "is_checkbox": true
+        },
+        "pre_warm_6": {
+            "name": "Pre-Warm 6",
+            "x": 1771,
+            "y": 1248,
+            "width": 37,
+            "height": 36,
+            "is_checkbox": true
+        },
+        "date_row_7": {
+            "name": "Date Row 7",
+            "x": 56,
+            "y": 1287,
+            "width": 275,
+            "height": 131,
+            "is_checkbox": false
+        },
+        "pos_screen_7": {
+            "name": "Pos Screen 7",
+            "x": 333,
+            "y": 1299,
+            "width": 37,
+            "height": 36,
+            "is_checkbox": true
+        },
+        "pos_dat_7": {
+            "name": "Pos DAT 7",
+            "x": 332,
+            "y": 1330,
+            "width": 37,
+            "height": 36,
+            "is_checkbox": true
+        },
+        "sickle_cell_7": {
+            "name": "Sickle Cell 7",
+            "x": 333,
+            "y": 1374,
+            "width": 37,
+            "height": 36,
+            "is_checkbox": true
+        },
+        "restriction_7": {
+            "name": "Restriction 7",
+            "x": 1382,
+            "y": 1295,
+            "width": 371,
+            "height": 131,
+            "is_checkbox": false
+        },
+        "crossmatch_7": {
+            "name": "Crossmatch 7",
+            "x": 1855,
+            "y": 1290,
+            "width": 260,
+            "height": 131,
+            "is_checkbox": false
+        },
+        "imm_spin_7": {
+            "name": "Imm Spin 7",
+            "x": 1771,
+            "y": 1289,
+            "width": 37,
+            "height": 36,
+            "is_checkbox": true
+        },
+        "sal_ahg_7": {
+            "name": "Sal-AHG 7",
+            "x": 1772,
+            "y": 1333,
+            "width": 37,
+            "height": 36,
+            "is_checkbox": true
+        },
+        "pre_warm_7": {
+            "name": "Pre-Warm 7",
+            "x": 1775,
+            "y": 1377,
+            "width": 37,
+            "height": 36,
+            "is_checkbox": true
+        },
+        "diagnosis_1": {
+            "name": "diagnosis_1",
+            "x": 557,
+            "y": 520,
+            "width": 809,
+            "height": 131,
+            "is_checkbox": false
+        },
+        "diagnosis_2": {
+            "name": "diagnosis_2",
+            "x": 580,
+            "y": 663,
+            "width": 814,
+            "height": 118,
+            "is_checkbox": false
+        },
+        "diagnosis_3": {
+            "name": "diagnosis_3",
+            "x": 582,
+            "y": 778,
+            "width": 784,
+            "height": 123,
+            "is_checkbox": false
+        },
+        "diagnosis_4": {
+            "name": "diagnosis_4",
+            "x": 579,
+            "y": 912,
+            "width": 814,
+            "height": 118,
+            "is_checkbox": false
+        },
+        "diagnosis_5": {
+            "name": "diagnosis_5",
+            "x": 581,
+            "y": 1035,
+            "width": 779,
+            "height": 121,
+            "is_checkbox": false
+        },
+        "diagnosis_6": {
+            "name": "diagnosis_6",
+            "x": 558,
+            "y": 1167,
+            "width": 814,
+            "height": 118,
+            "is_checkbox": false
+        },
+        "diagnosis_7": {
+            "name": "diagnosis_7",
+            "x": 579,
+            "y": 1295,
+            "width": 784,
+            "height": 134,
+            "is_checkbox": false
+        }
+    }
+}

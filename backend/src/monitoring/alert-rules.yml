@@ -1,0 +1,91 @@
+groups:
+  - name: caution_cards_alerts
+    rules:
+      # Upload Performance Alerts
+      - alert: HighUploadFailureRate
+        expr: |
+          sum(rate(caution_card_upload_attempts_total{status="failure"}[5m]))
+          /
+          sum(rate(caution_card_upload_attempts_total[5m])) > 0.1
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: High upload failure rate
+          description: Upload failure rate is above 10% for the last 5 minutes
+
+      - alert: SlowUploadProcessing
+        expr: rate(caution_card_upload_duration_seconds_sum[5m]) / rate(caution_card_upload_duration_seconds_count[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Slow upload processing
+          description: Average upload processing time is above 10 seconds
+
+      # OCR Performance Alerts
+      - alert: LowOCRAccuracy
+        expr: avg(caution_card_ocr_accuracy_score) < 0.8
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Low OCR accuracy
+          description: Average OCR accuracy score is below 80%
+
+      - alert: SlowOCRProcessing
+        expr: rate(caution_card_ocr_processing_seconds_sum[5m]) / rate(caution_card_ocr_processing_seconds_count[5m]) > 20
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Slow OCR processing
+          description: Average OCR processing time is above 20 seconds
+
+      # Resource Usage Alerts
+      - alert: HighDiskUsage
+        expr: caution_card_disk_usage_bytes / 1024 / 1024 / 1024 > 85
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: High disk usage
+          description: Disk usage is above 85% of capacity
+
+      - alert: HighMemoryUsage
+        expr: caution_card_memory_usage_bytes / 1024 / 1024 > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: High memory usage
+          description: Memory usage is above 80%
+
+      # Error Rate Alerts
+      - alert: HighErrorRate
+        expr: sum(rate(caution_card_errors_total[5m])) > 0.2
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: High error rate
+          description: Error rate is above 20% in the last 5 minutes
+
+      - alert: WebSocketConnectionDrops
+        expr: delta(caution_card_websocket_connections[5m]) < -5
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: WebSocket connection drops
+          description: More than 5 WebSocket connections dropped in the last 5 minutes
+
+      # Redis Alerts
+      - alert: RedisConnectionIssues
+        expr: caution_card_redis_connections < 1
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: Redis connection issues
+          description: No active Redis connections detected
