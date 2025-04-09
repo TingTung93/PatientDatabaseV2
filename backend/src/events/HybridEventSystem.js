@@ -4,11 +4,11 @@
  * Core event system that implements the hybrid persistence approach
  * for real-time updates with reliable delivery.
  */
-const { v4: uuidv4 } = require('uuid');
-const EventClassifier = require('./EventClassifier');
-const PersistenceManager = require('./PersistenceManager');
-const ClientSessionTracker = require('./ClientSessionTracker');
-const logger = require('../utils/logger');
+import { v4 as uuidv4 } from 'uuid';
+import EventClassifier from './EventClassifier.js';
+import PersistenceManager from './PersistenceManager.js';
+import ClientSessionTracker from './ClientSessionTracker.js';
+import logger from '../utils/logger.js';
 
 class HybridEventSystem {
   constructor() {
@@ -254,5 +254,6 @@ class HybridEventSystem {
   }
 }
 
-// Export singleton instance
-module.exports = new HybridEventSystem(); 
+// Create and export a singleton instance
+const eventSystem = new HybridEventSystem();
+export { eventSystem as default }; 

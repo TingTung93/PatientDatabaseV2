@@ -1,5 +1,5 @@
-const BaseValidator = require('./BaseValidator');
-const ValidationError = require('../../errors/ValidationError');
+import BaseValidator from './BaseValidator.js';
+import ValidationError from '../../errors/ValidationError.js';
 
 class UserValidator extends BaseValidator {
   constructor() {
@@ -216,4 +216,4 @@ class UserValidator extends BaseValidator {
   }
 }
 
-module.exports = UserValidator; 
+export default UserValidator; 

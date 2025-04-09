@@ -1,4 +1,4 @@
-const BaseValidator = require('./BaseValidator');
+import BaseValidator from './BaseValidator.js';
 
 class ReportValidator extends BaseValidator {
   constructor() {
@@ -114,4 +114,4 @@ class ReportValidator extends BaseValidator {
   }
 }
 
-module.exports = ReportValidator;
+export default ReportValidator;

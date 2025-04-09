@@ -1,4 +1,4 @@
-const { ValidationError } = require('../../errors/ValidationError');
+import { ValidationError } from '../../errors/ValidationError.js';
 
 class BaseValidator {
   constructor() {
@@ -121,4 +121,4 @@ class BaseValidator {
   }
 }
 
-module.exports = BaseValidator; 
+export default BaseValidator; 

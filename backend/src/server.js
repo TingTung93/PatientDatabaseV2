@@ -1,29 +1,60 @@
-require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-const path = require('path');
-const fs = require('fs');
-const http = require('http');
-const { Server } = require('socket.io');
-const { db, initializeDatabase } = require('./database/init');
-const eventSystem = require('./events/HybridEventSystem');
-const logger = require('./utils/logger');
-const ocrService = require('./services/ocrService');
-const { getInstance: getWebSocketService } = require('./services/WebSocketService');
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import fs from 'fs';
+import process from 'process';
+import logger from './utils/logger.js';
+
+// ESM equivalent for __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// --- Load correct .env file based on NODE_ENV ---
+const nodeEnv = process.env.NODE_ENV || 'development';
+const envPath = path.resolve(__dirname, `../config/env/.env.${nodeEnv}`);
+const defaultEnvPath = path.resolve(__dirname, '../config/env/.env');
+
+if (fs.existsSync(envPath)) {
+  dotenv.config({ path: envPath });
+  logger.info(`Loaded environment variables from: ${envPath}`);
+} else if (fs.existsSync(defaultEnvPath)) {
+  dotenv.config({ path: defaultEnvPath });
+  logger.info(`Loaded environment variables from: ${defaultEnvPath}`);
+} else {
+  logger.warn(`No .env file found at ${envPath} or ${defaultEnvPath}. Using default/system environment variables.`);
+  // dotenv.config(); // Load default .env if needed, or rely on system vars
+}
+// ------------------------------------------------
+
+// Now import other modules that might depend on environment variables
+import express from 'express';
+import cors from 'cors';
+import http from 'http';
+import { Server } from 'socket.io';
+import { db, initializeDatabase as initializePgPool, pool } from './database/init.js';
+import { initializeSequelize, getSequelize, Sequelize } from './database/db.js';
+import { initializeModels } from './database/models/index.js';
+import eventSystem from './events/HybridEventSystem.js';
+import ocrService from './services/ocrService.js';
+import { getInstance as getWebSocketService } from './services/WebSocketService.js';
+
+// Import Routers
+import patientsRouter from './routes/patients.js';
+import cautionCardsRouter from './routes/caution-cards.js';
+import reportsRouter from './routes/reports.js';
 
 // Create Express app
 const app = express();
 
 // Define allowed origins
 const allowedOrigins = [
-    process.env.FRONTEND_URL || 'http://localhost:5173', // Use 5173 as likely default based on error
-    'http://localhost:3000' // Add the origin reported in the error
+    process.env.FRONTEND_URL || 'http://localhost:5173',
+    'http://localhost:3000'
 ];
 
 // Middleware setup
 app.use(cors({
     origin: function (origin, callback) {
-        // Allow requests with no origin (like mobile apps or curl requests)
         if (!origin) return callback(null, true);
         if (allowedOrigins.indexOf(origin) === -1) {
             const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
@@ -39,7 +70,8 @@ app.use(express.urlencoded({ extended: true }));
 // Create upload directories if they don't exist
 const uploadDirs = [
     path.join(__dirname, '../uploads'),
-    path.join(__dirname, '../uploads/caution-cards')
+    path.join(__dirname, '../uploads/caution-cards'),
+    path.join(__dirname, '../uploads/reports')
 ];
 
 uploadDirs.forEach(dir => {
@@ -48,16 +80,13 @@ uploadDirs.forEach(dir => {
     }
 });
 
-// Routes
-const patientsRouter = require('./routes/patients');
-const cautionCardsRouter = require('./routes/caution-cards');
-
 // API v1 routes
 const apiV1Router = express.Router();
 app.use('/api/v1', apiV1Router);
 
 apiV1Router.use('/patients', patientsRouter);
 apiV1Router.use('/caution-cards', cautionCardsRouter);
+apiV1Router.use('/reports', reportsRouter);
 
 // Serve static files
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
@@ -83,7 +112,8 @@ app.get('/api/health', (req, res) => {
 });
 
 // Error handling middleware
-app.use((err, req, res, next) => {
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, _next) => { // Express requires 4th param for error handlers
     logger.error('Unhandled error:', err);
     res.status(err.statusCode || 500).json({
         status: 'error',
@@ -93,22 +123,43 @@ app.use((err, req, res, next) => {
 
 async function startServer() {
     try {
-        // Step 1: Initialize database
-        logger.info('Initializing database...');
-        await initializeDatabase();
-        logger.info('Database initialized successfully');
+        // Step 1a: Initialize Sequelize (reads loaded env vars)
+        logger.info('Initializing Sequelize...');
+        const sequelize = initializeSequelize(); // Call the initialization function
+        if (!sequelize) {
+            throw new Error('Sequelize initialization failed. Check logs and .env configuration.');
+        }
+
+        // Step 1b: Initialize Sequelize Models (after sequelize instance exists)
+        logger.info('Initializing Sequelize models...');
+        initializeModels(sequelize); // Pass the instance to the models
+        logger.info('Sequelize models initialized successfully');
+        
+        // Step 1c: Sync Sequelize models (after they are initialized)
+        try {
+            await sequelize.sync({ alter: true });
+            logger.info('Database models synced successfully');
+        } catch (syncError) {
+            logger.error('Error syncing database models:', syncError);
+            throw syncError;
+        }
+
+        // Step 1d: Initialize pg Pool & SQLite (reads loaded env vars)
+        logger.info('Initializing PG Pool and SQLite...');
+        await initializePgPool(); // Renamed to avoid conflict
+        logger.info('PG Pool and SQLite initialized successfully');
 
         // Step 2: Create HTTP server
         const server = http.createServer(app);
         
         // Step 3: Initialize WebSocket service
-        const webSocketService = getWebSocketService(server);
+        getWebSocketService(server);
         logger.info('WebSocket service initialized');
 
         // Step 4: Initialize event system
         await eventSystem.initialize(new Server(server, {
             cors: {
-                origin: allowedOrigins, // Use the same array here
+                origin: allowedOrigins,
                 methods: ['GET', 'POST'],
                 credentials: true
             }
@@ -135,8 +186,18 @@ async function startServer() {
             await ocrService.shutdown();
             logger.info('OCR service shut down');
             
-            await eventSystem.shutdown();
-            logger.info('Event system shut down');
+            // Correctly close the WebSocket server (part of eventSystem)
+            if (eventSystem.io) {
+                eventSystem.io.close((err) => {
+                    if (err) {
+                        logger.error('Error closing WebSocket server:', err);
+                    } else {
+                        logger.info('WebSocket server closed');
+                    }
+                });
+            }
+            // There is no explicit eventSystem.shutdown() method
+            logger.info('Event system shutdown initiated (via WebSocket close)');
             
             server.close(() => {
                 logger.info('HTTP server closed');
@@ -156,4 +217,5 @@ async function startServer() {
 // Start the server
 startServer();
 
-module.exports = app;
+// Export the app and potentially the initialized sequelize instance if needed elsewhere immediately
+export { app, getSequelize }; // Export getSequelize instead of the instance directly

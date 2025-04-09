@@ -1,8 +1,8 @@
-const ValidationError = require('./ValidationError');
-const NotFoundError = require('./NotFoundError');
-const DatabaseError = require('./DatabaseError');
+import ValidationError from './ValidationError.js';
+import NotFoundError from './NotFoundError.js';
+import DatabaseError from './DatabaseError.js';
 
-module.exports = {
+export {
   ValidationError,
   NotFoundError,
   DatabaseError

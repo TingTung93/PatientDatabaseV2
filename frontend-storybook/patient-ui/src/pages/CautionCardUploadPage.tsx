@@ -115,7 +115,7 @@ export const CautionCardUploadPage: React.FC = () => {
       const result = await fileUploadService.uploadFile(
         item.file,
         FileTypeCategory.CautionCard,
-        patientId || 'unknown',
+        patientId,
         (progress: UploadProgress) => {
           updateItemProgress(fileName, progress.percent, 'uploading');
         }
@@ -177,10 +177,6 @@ export const CautionCardUploadPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
-    if (!selectedPatient) {
-      setGlobalError('Please select a patient');
-      return;
-    }
     if (uploadItems.length === 0) {
       setGlobalError('Please select at least one file');
       return;
@@ -200,7 +196,7 @@ export const CautionCardUploadPage: React.FC = () => {
           const result = await fileUploadService.uploadFile(
             item.file,
             FileTypeCategory.CautionCard,
-            patientId || 'unknown',
+            patientId,
             (progress: UploadProgress) => {
               updateItemProgress(item.file.name, progress.percent, 'uploading');
             }
@@ -354,6 +350,7 @@ export const CautionCardUploadPage: React.FC = () => {
                       <Box sx={{ display: 'flex', width: '100%', mb: item.preview ? 1 : 0 }}>
                         <ListItemText
                           primary={item.file.name}
+                          secondaryTypographyProps={{ component: 'div' }}
                           secondary={
                             <Box sx={{ width: '100%' }}>
                               {item.status === 'uploading' && (

@@ -7,4 +7,4 @@ class DatabaseError extends Error {
   }
 }
 
-module.exports = DatabaseError; 
+export default DatabaseError; 

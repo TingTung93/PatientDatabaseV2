@@ -1,7 +1,15 @@
 const { Model, DataTypes } = require('sequelize');
 
 module.exports = (sequelize, Sequelize) => {
-  class Patient extends Model {}
+  class Patient extends Model {
+    static associate(models) {
+      Patient.hasMany(models.OcrResult, {
+        foreignKey: 'patientId',
+        as: 'ocrResults'
+      });
+      // Keep existing associations if any
+    }
+  }
 
   Patient.init({
     id: {
@@ -122,7 +130,8 @@ module.exports = (sequelize, Sequelize) => {
       {
         fields: ['updated_by']
       }
-    ]
+    ],
+    comment: 'Stores patient information'
   });
 
   return Patient;

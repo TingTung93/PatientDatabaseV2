@@ -51,12 +51,17 @@ export class FileUploadService {
     // Determine the relative endpoint path based on config structure
     const endpointPath =
       category === FileTypeCategory.Report
-        ? patientId ? `patients/${patientId}/reports` : 'reports'
-        : patientId ? `patients/${patientId}/caution-cards` : 'caution-cards';
+        ? 'reports/upload' // Always use the dedicated upload endpoint for reports
+        : patientId ? `patients/${patientId}/caution-cards` : 'caution-cards/process'; // Use process endpoint for non-patient-linked cards
 
     const formData = new FormData();
-    formData.append('file', file); // Use 'file' as the field name to match backend expectation
-    if (patientId) {
+    // Use the correct field name based on the category
+    const fileFieldName = category === FileTypeCategory.Report ? 'report' : 'file';
+    formData.append(fileFieldName, file);
+
+    // Append patient_id only if it exists and category is not Report
+    // (Assuming reports don't need patient_id directly in this FormData)
+    if (patientId && category !== FileTypeCategory.Report) {
       formData.append('patient_id', patientId);
     }
     // Add report type for reports

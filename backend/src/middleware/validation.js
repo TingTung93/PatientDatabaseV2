@@ -1,6 +1,6 @@
-const { PatientValidator, ReportValidator, CautionCardValidator, UserValidator, RoleValidator } = require('../utils/validation');
-const { ValidationError } = require('../errors/ValidationError');
-const { body, validationResult } = require('express-validator');
+import { PatientValidator, ReportValidator, CautionCardValidator, UserValidator, RoleValidator } from '../utils/validation/index.js';
+import { ValidationError } from '../errors/ValidationError.js';
+import { body, validationResult } from 'express-validator';
 
 /**
  * Creates validation middleware for a specific validator
@@ -55,45 +55,54 @@ const createFileValidationMiddleware = (validator) => {
 };
 
 // Pre-configured middleware for each validator
-const patientValidation = createValidationMiddleware(new PatientValidator());
-const patientUpdateValidation = createValidationMiddleware(new PatientValidator(), 'validateUpdate');
+const validatePatient = createValidationMiddleware(new PatientValidator());
+const validatePatientUpdate = createValidationMiddleware(new PatientValidator(), 'validateUpdate');
 
-const reportValidation = createValidationMiddleware(new ReportValidator());
-const reportUpdateValidation = createValidationMiddleware(new ReportValidator(), 'validateUpdate');
-const reportFileValidation = createFileValidationMiddleware(new ReportValidator());
+const validateReport = createValidationMiddleware(new ReportValidator());
+const validateReportUpdate = createValidationMiddleware(new ReportValidator(), 'validateUpdate');
+const validateReportFile = createFileValidationMiddleware(new ReportValidator());
 
-const cautionCardValidation = createValidationMiddleware(new CautionCardValidator());
-const cautionCardUpdateValidation = createValidationMiddleware(new CautionCardValidator(), 'validateUpdate');
-const cautionCardFileValidation = createFileValidationMiddleware(new CautionCardValidator());
+const validateCautionCard = createValidationMiddleware(new CautionCardValidator());
+const validateCautionCardUpdate = createValidationMiddleware(new CautionCardValidator(), 'validateUpdate');
+const validateCautionCardFile = createFileValidationMiddleware(new CautionCardValidator());
 
-// Export pre-configured middleware for each validator
-module.exports = {
+const validateUser = createValidationMiddleware(new UserValidator());
+const validateUserUpdate = createValidationMiddleware(new UserValidator(), 'validateUpdate');
+const validateUserLogin = createValidationMiddleware(new UserValidator(), 'validateLogin');
+const validatePasswordReset = createValidationMiddleware(new UserValidator(), 'validatePasswordReset');
+const validatePasswordChange = createValidationMiddleware(new UserValidator(), 'validatePasswordChange');
+
+const validateRole = createValidationMiddleware(new RoleValidator());
+const validateRoleUpdate = createValidationMiddleware(new RoleValidator(), 'validateUpdate');
+const validatePermissionAssignment = createValidationMiddleware(new RoleValidator(), 'validatePermissionAssignment');
+
+export {
   // Patient validation
-  validatePatient: patientValidation,
-  validatePatientUpdate: patientUpdateValidation,
+  validatePatient,
+  validatePatientUpdate,
 
   // Report validation
-  validateReport: reportValidation,
-  validateReportUpdate: reportUpdateValidation,
-  validateReportFile: reportFileValidation,
+  validateReport,
+  validateReportUpdate,
+  validateReportFile,
 
   // Caution card validation
-  validateCautionCard: cautionCardValidation,
-  validateCautionCardUpdate: cautionCardUpdateValidation,
-  validateCautionCardFile: cautionCardFileValidation,
+  validateCautionCard,
+  validateCautionCardUpdate,
+  validateCautionCardFile,
 
   // User validation middleware
-  validateUser: createValidationMiddleware(new UserValidator()),
-  validateUserUpdate: createValidationMiddleware(new UserValidator(), 'validateUpdate'),
-  validateUserLogin: createValidationMiddleware(new UserValidator(), 'validateLogin'),
-  validatePasswordReset: createValidationMiddleware(new UserValidator(), 'validatePasswordReset'),
-  validatePasswordChange: createValidationMiddleware(new UserValidator(), 'validatePasswordChange'),
-  
+  validateUser,
+  validateUserUpdate,
+  validateUserLogin,
+  validatePasswordReset,
+  validatePasswordChange,
+
   // Role validation middleware
-  validateRole: createValidationMiddleware(new RoleValidator()),
-  validateRoleUpdate: createValidationMiddleware(new RoleValidator(), 'validateUpdate'),
-  validatePermissionAssignment: createValidationMiddleware(new RoleValidator(), 'validatePermissionAssignment'),
-  
+  validateRole,
+  validateRoleUpdate,
+  validatePermissionAssignment,
+
   // Utility functions
   createValidationMiddleware,
   createFileValidationMiddleware

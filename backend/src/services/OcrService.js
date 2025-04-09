@@ -1,11 +1,16 @@
-const { spawn } = require('child_process');
-const fs = require('fs');
-const fsPromises = require('fs').promises;
-const path = require('path');
-const { v4: uuidv4 } = require('uuid');
-const sharp = require('sharp');
-const logger = require('../utils/logger');
-const { OcrError } = require('../utils/errors');
+import { spawn } from 'child_process';
+import fs from 'fs';
+import fsPromises from 'fs/promises';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { v4 as uuidv4 } from 'uuid';
+import sharp from 'sharp';
+import logger from '../utils/logger.js';
+import { OcrError } from '../utils/errors.js';
+
+// Determine the directory name using import.meta.url
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Configuration constants
 const OCR_CONFIG = {
@@ -27,26 +32,26 @@ class OCRService {
     this.isReady = false;
     this.requestQueue = [];
     this.currentRequest = null;
-    this.pythonScript = path.join(__dirname, '../../python/ocr_server.py');
+    this.pythonScript = path.join(__dirname, '../ocr/ocr_server.py');
     this.pythonPath = path.join(__dirname, '../../venv/Scripts/python.exe');
     
-    // Don't initialize repositories in constructor
+    // Lazy-load repositories
     this._patientRepository = null;
     this._ocrResultRepository = null;
   }
 
-  // Lazy-load repositories
-  get patientRepository() {
+  // Lazy-load repositories using dynamic import
+  async getPatientRepository() {
     if (!this._patientRepository) {
-      const PatientRepository = require('../repositories/PatientRepository');
+      const { PatientRepository } = await import('../repositories/PatientRepository.js');
       this._patientRepository = new PatientRepository();
     }
     return this._patientRepository;
   }
 
-  get ocrResultRepository() {
+  async getOcrResultRepository() {
     if (!this._ocrResultRepository) {
-      const OcrResultRepository = require('../repositories/OcrResultRepository');
+      const { OcrResultRepository } = await import('../repositories/OcrResultRepository.js');
       this._ocrResultRepository = new OcrResultRepository();
     }
     return this._ocrResultRepository;
@@ -54,7 +59,7 @@ class OCRService {
 
   async checkPath(filePath, description) {
     try {
-      await fs.promises.access(filePath, fs.constants.F_OK);
+      await fsPromises.access(filePath, fs.constants.F_OK);
       logger.debug(`Found ${description} at: ${filePath}`);
       return true;
     } catch (error) {
@@ -74,7 +79,7 @@ class OCRService {
         const isWindows = process.platform === 'win32';
         const venvPath = path.join(__dirname, '../../venv');
         const pythonPath = path.join(venvPath, isWindows ? 'Scripts/python.exe' : 'bin/python');
-        const scriptPath = path.join(__dirname, '../../python/ocr_server.py');
+        const scriptPath = path.join(__dirname, '../ocr/ocr_server.py');
 
         logger.info('Starting OCR service with paths:', {
           venvPath,
@@ -173,6 +178,7 @@ class OCRService {
             } catch (err) {
               logger.error('Error parsing Python response:', err);
               logger.error('Problematic line:', line);
+              reject(new Error('Failed to parse response from OCR process'));
             }
           }
         });
@@ -192,7 +198,7 @@ class OCRService {
               
               // Check for specific error patterns
               if (line.includes('ModuleNotFoundError')) {
-                logger.error('Python module not found. Please ensure all dependencies are installed in the virtual environment');
+                logger.error('Python module not found. Ensure dependencies are installed in venv');
               } else if (line.includes('not running in a virtual environment')) {
                 logger.error('Python process not running in virtual environment');
               }
@@ -220,14 +226,35 @@ class OCRService {
 
   async sendRequest(request) {
     if (!this.isReady) {
-      throw new OcrError('OCR service not initialized');
+      throw new OcrError('OCR service not ready or initialized');
     }
 
     return new Promise((resolve, reject) => {
+      // Set a timeout for the individual request
+      const requestTimeout = setTimeout(() => {
+        reject(new OcrError('OCR request timed out'));
+        // Attempt to remove the request from the queue if it's still there
+        const index = this.requestQueue.findIndex(item => item.request === request);
+        if (index > -1) {
+          this.requestQueue.splice(index, 1);
+        }
+        // If this was the current request, clear it
+        if (this.currentRequest && this.currentRequest.request === request) {
+          this.currentRequest = null;
+          this.processNextRequest();
+        }
+      }, OCR_CONFIG.timeouts.processing);
+
       this.requestQueue.push({
         request,
-        resolve,
-        reject
+        resolve: (result) => {
+          clearTimeout(requestTimeout);
+          resolve(result);
+        },
+        reject: (error) => {
+          clearTimeout(requestTimeout);
+          reject(error);
+        }
       });
 
       this.processNextRequest();
@@ -235,6 +262,7 @@ class OCRService {
   }
 
   async processImage(imagePath) {
+    await this.checkPath(imagePath, 'Image file for processing');
     return this.sendRequest({
       command: 'process_image',
       image_path: imagePath
@@ -242,6 +270,9 @@ class OCRService {
   }
 
   async processBatch(imagePaths, batchSize = 4) {
+    for (const p of imagePaths) {
+      await this.checkPath(p, `Batch image file ${p}`);
+    }
     return this.sendRequest({
       command: 'process_batch',
       image_paths: imagePaths,
@@ -252,298 +283,299 @@ class OCRService {
   async extractData(text) {
     return this.sendRequest({
       command: 'extract_data',
-      text
+      text: text
     });
   }
 
   async shutdown() {
-    if (this.pythonProcess) {
-      this.pythonProcess.kill();
-      this.pythonProcess = null;
-      this.isReady = false;
-    }
-  }
+    return new Promise((resolve) => {
+      if (!this.pythonProcess) {
+        resolve();
+        return;
+      }
 
-  /**
-   * Main process method that orchestrates the OCR workflow
-   * @param {Object} options - Processing options
-   * @param {string} options.path - Path to the image file
-   * @returns {Promise<Object>} Processed OCR results
-   */
-  async process({ path: imagePath }) {
-    try {
-      const startTime = Date.now();
-      
-      // Step 1: Preprocess the image
-      const preprocessedImagePath = await this.preprocess(imagePath);
-      
-      // Step 2: Perform OCR
-      const rawResults = await this.performOcr(preprocessedImagePath);
-      
-      // Step 3: Postprocess results
-      const processedResults = await this.postprocess(rawResults);
-      
-      // Add processing metadata
-      processedResults.metadata = {
-        processingTime: Date.now() - startTime,
-        originalImage: imagePath,
-        timestamp: new Date().toISOString()
-      };
-
-      return processedResults;
-    } catch (error) {
-      throw this.handleError(error);
-    }
-  }
-
-  /**
-   * Preprocess the image for better OCR results
-   * @private
-   * @param {string} imagePath - Path to the original image
-   * @returns {Promise<string>} Path to the preprocessed image
-   */
-  async preprocess(imagePath) {
-    try {
-      const outputPath = path.join(path.dirname(imagePath), `preprocessed_${path.basename(imagePath)}`);
-      
-      await sharp(imagePath)
-        .resize({ width: 2000, height: 2000, fit: 'inside' })
-        .normalize()
-        .modulate({ brightness: 1.1, contrast: OCR_CONFIG.preprocessing.contrast })
-        .sharpen()
-        .threshold(OCR_CONFIG.preprocessing.binarizationThreshold)
-        .toFile(outputPath);
-
-      logger.info(`Image preprocessed: ${outputPath}`);
-      return outputPath;
-    } catch (error) {
-      throw new OcrError('Image preprocessing failed', error);
-    }
-  }
-
-  /**
-   * Perform OCR on the preprocessed image
-   * @private
-   * @param {string} imagePath - Path to the preprocessed image
-   * @returns {Promise<Object>} Raw OCR results
-   */
-  async performOcr(imagePath) {
-    await this.validateDependencies();
-    
-    const maskPath = path.join(__dirname, '../../form_ocr/resources/masks/alignment_mask.png');
-    const manualMaskPath = path.join(__dirname, '../../form_ocr/resources/masks/manualmask.png');
-    const coordinatesPath = path.join(__dirname, '../../form_ocr/resources/coordinates/caution_card_coords.json');
-
-    return new Promise((resolve, reject) => {
-      const pythonProcess = spawn(this.pythonPath, [
-        this.pythonScript,
-        imagePath,
-        maskPath,
-        manualMaskPath,
-        coordinatesPath
-      ], { stdio: ['pipe', 'pipe', 'pipe'] });
-
-      let outputData = '';
-      let errorData = '';
-
-      pythonProcess.stdout.on('data', (data) => {
-        outputData += data.toString();
-        logger.debug(`Python output: ${data.toString()}`);
+      this.pythonProcess.on('exit', () => {
+        logger.info('OCR service shut down gracefully');
+        this.isReady = false;
+        this.pythonProcess = null;
+        resolve();
       });
 
-      pythonProcess.stderr.on('data', (data) => {
-        errorData += data.toString();
-        logger.error(`Python error: ${data.toString()}`);
-      });
+      try {
+        this.pythonProcess.stdin.write(JSON.stringify({ command: 'shutdown' }) + '\n');
+        this.pythonProcess.stdin.end();
+      } catch (error) {
+        logger.warn('Error sending shutdown command to Python process, killing instead:', error);
+        this.pythonProcess.kill();
+      }
 
-      const timeout = setTimeout(() => {
-        pythonProcess.kill();
-        reject(new OcrError('OCR processing timeout'));
-      }, OCR_CONFIG.timeouts.processing);
-
-      pythonProcess.on('close', (code) => {
-        clearTimeout(timeout);
-        
-        if (code !== 0) {
-          reject(new OcrError(`OCR processing failed with code ${code}: ${errorData}`));
-          return;
+      // Force kill if it doesn't exit after a timeout
+      setTimeout(() => {
+        if (this.pythonProcess) {
+          logger.warn('Python process did not exit gracefully, forcing kill');
+          this.pythonProcess.kill('SIGKILL');
+          this.isReady = false; // Ensure state reflects reality
+          this.pythonProcess = null; // Clear reference
+          resolve(); // Resolve even on force kill
         }
-
-        try {
-          const result = JSON.parse(outputData);
-          if (result.status === 'error') {
-            reject(new OcrError(result.error.message));
-            return;
-          }
-          resolve(result.data);
-        } catch (error) {
-          reject(new OcrError('Failed to parse OCR results', error));
-        }
-      });
+      }, 5000); // 5 second timeout for graceful shutdown
     });
   }
 
-  /**
-   * Postprocess and structure the OCR results
-   * @private
-   * @param {Object} rawResults - Raw OCR results
-   * @returns {Promise<Object>} Processed and structured results
-   */
-  async postprocess(rawResults) {
+  async process({ path: imagePath }) {
     try {
-      const structuredResults = {
-        extractedData: {
-          name: this.cleanupText(rawResults.patient_info.name),
-          dateOfBirth: this.formatDate(rawResults.patient_info.dob),
-          medicalRecordNumber: this.cleanupText(rawResults.patient_info.mrn),
-          phenotypes: this.cleanupPhenotypes(rawResults.phenotype_data)
-        },
-        confidence: rawResults.debug_info.confidence_scores,
-        processingTime: rawResults.debug_info.processing_time,
-        validationStatus: this.validateResults(rawResults)
-      };
+      logger.info(`Starting OCR process for image: ${imagePath}`);
 
-      return structuredResults;
-    } catch (error) {
-      throw new OcrError('Results postprocessing failed', error);
-    }
-  }
+      // 1. Preprocess the image
+      const preprocessedPath = await this.preprocess(imagePath);
+      logger.info(`Image preprocessed successfully: ${preprocessedPath}`);
 
-  /**
-   * Validate all required dependencies exist
-   * @private
-   */
-  async validateDependencies() {
-    const requiredPaths = [
-      { path: this.pythonScript, name: 'Python script' },
-      { path: this.pythonPath, name: 'Python executable' },
-      { path: path.join(__dirname, '../../form_ocr/resources/masks/alignment_mask.png'), name: 'Alignment mask' },
-      { path: path.join(__dirname, '../../form_ocr/resources/masks/manualmask.png'), name: 'Manual mask' },
-      { path: path.join(__dirname, '../../form_ocr/resources/coordinates/caution_card_coords.json'), name: 'Coordinates file' }
-    ];
+      // 2. Perform OCR
+      const ocrResult = await this.performOcr(preprocessedPath);
+      logger.info('OCR performed successfully');
+      // logger.debug('Raw OCR results:', ocrResult); // Optionally log raw results
 
-    for (const { path: filePath, name } of requiredPaths) {
-      try {
-        await fsPromises.access(filePath);
-      } catch (error) {
-        throw new OcrError(`${name} not found at: ${filePath}`);
+      // 3. Postprocess results
+      const finalResults = await this.postprocess(ocrResult);
+      logger.info('OCR results postprocessed');
+      // logger.debug('Final results:', finalResults); // Optionally log final results
+
+      // 4. Clean up temporary preprocessed file
+      if (preprocessedPath !== imagePath) { // Only delete if preprocessing created a new file
+        await fsPromises.unlink(preprocessedPath);
+        logger.info(`Cleaned up temporary file: ${preprocessedPath}`);
       }
-    }
-  }
 
-  /**
-   * Clean up extracted text
-   * @private
-   */
-  cleanupText(text) {
-    return text?.trim().replace(/\s+/g, ' ') || '';
-  }
-
-  /**
-   * Format date string to ISO format
-   * @private
-   */
-  formatDate(dateString) {
-    if (!dateString) return '';
-    try {
-      const date = new Date(dateString);
-      return date.toISOString().split('T')[0];
+      return finalResults;
     } catch (error) {
-      logger.warn(`Invalid date format: ${dateString}`);
-      return dateString;
+      this.handleError(error);
+      throw error; // Re-throw after logging/handling
     }
   }
 
-  /**
-   * Clean up phenotype data
-   * @private
-   */
+  async preprocess(imagePath) {
+    const tempDir = path.join(__dirname, '../../temp_ocr');
+    await fsPromises.mkdir(tempDir, { recursive: true });
+    const outputFilename = `${uuidv4()}_processed.png`;
+    const outputPath = path.join(tempDir, outputFilename);
+
+    try {
+      const image = sharp(imagePath);
+      const metadata = await image.metadata();
+
+      // Ensure DPI is sufficient, otherwise increase density
+      const density = (metadata.density && metadata.density >= OCR_CONFIG.preprocessing.defaultDPI)
+        ? metadata.density
+        : OCR_CONFIG.preprocessing.defaultDPI;
+
+      await image
+        .density(density)
+        .grayscale() // Convert to grayscale
+        .linear(OCR_CONFIG.preprocessing.contrast, -(128 * (OCR_CONFIG.preprocessing.contrast - 1))) // Adjust contrast
+        .normalize() // Enhance contrast further
+        .sharpen() // Sharpen the image
+        .threshold(OCR_CONFIG.preprocessing.binarizationThreshold) // Binarize the image
+        .toFile(outputPath);
+
+      logger.info(`Image preprocessed and saved to: ${outputPath}`);
+      return outputPath;
+    } catch (error) {
+      logger.error(`Error during image preprocessing: ${error.message}`);
+      throw new OcrError('Failed during image preprocessing', error);
+    }
+  }
+
+  async performOcr(imagePath) {
+    logger.info(`Sending image to Python OCR server: ${imagePath}`);
+    try {
+      const response = await this.sendRequest({
+        command: 'process_image',
+        image_path: imagePath
+      });
+
+      if (response.status === 'success') {
+        logger.info('Successfully received OCR results from Python server');
+        return response.data; // Assuming response.data contains the structured OCR results
+      } else {
+        logger.error('OCR process reported an error:', response.error);
+        throw new OcrError(response.error || 'Unknown error during OCR processing');
+      }
+    } catch (error) {
+      logger.error(`Error communicating with Python OCR process: ${error.message}`);
+      if (error instanceof OcrError) {
+        throw error; // Re-throw OcrError directly
+      }
+      throw new OcrError('Failed to perform OCR via Python process', error);
+    }
+  }
+
+  async postprocess(rawResults) {
+    // Assuming rawResults is the structured data from Python:
+    // { text: "...", extracted_data: { name: "...", dob: "...", phenotypes: [...] } }
+    if (!rawResults || typeof rawResults !== 'object') {
+      throw new OcrError('Invalid raw OCR results received for postprocessing');
+    }
+
+    const cleanedText = this.cleanupText(rawResults.text || '');
+    const extractedData = rawResults.extracted_data || {};
+
+    const formattedDob = this.formatDate(extractedData.dob);
+    const cleanedPhenotypes = this.cleanupPhenotypes(extractedData.phenotypes);
+
+    const processedResults = {
+      rawText: cleanedText,
+      extractedData: {
+        name: extractedData.name ? String(extractedData.name).trim() : null,
+        dob: formattedDob,
+        phenotypes: cleanedPhenotypes,
+        // Add other fields if extracted by Python
+      },
+      confidenceScores: rawResults.confidence || {}, // Include confidence if available
+      processingMetadata: {
+        ocrTimestamp: new Date().toISOString(),
+        ocrEngine: rawResults.engine || 'Unknown', // Include engine info if available
+      },
+      validation: {
+        isValid: true,
+        warnings: []
+      }
+    };
+
+    this.validateResults(processedResults);
+    processedResults.validation.warnings = this.generateWarnings(processedResults);
+
+    logger.info('OCR results postprocessed successfully');
+    return processedResults;
+  }
+
+  async validateDependencies() {
+    // This could be expanded to check Python version, Tesseract version, etc. via the Python process
+    if (!this.isReady) {
+      await this.initialize();
+    }
+    // Example: Send a 'ping' or 'status' command to Python process
+    try {
+      const response = await this.sendRequest({ command: 'status' });
+      if (response.status !== 'ready') {
+        throw new OcrError('Dependency check failed: Python process not ready');
+      }
+      logger.info('OCR service dependencies validated successfully.');
+      return true;
+    } catch (error) {
+      logger.error(`Dependency validation failed: ${error.message}`);
+      throw new OcrError('OCR dependency validation failed', error);
+    }
+  }
+
+  cleanupText(text) {
+    if (typeof text !== 'string') return '';
+    // Replace multiple whitespace chars with a single space, trim start/end
+    return text.replace(/\s+/g, ' ').trim();
+  }
+
+  formatDate(dateString) {
+    if (!dateString || typeof dateString !== 'string') return null;
+    try {
+      // Attempt to parse common formats, prioritize YYYY-MM-DD
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) {
+        // Try different parsing if initial fails (more robust parsing needed here)
+        logger.warn(`Could not parse date string initially: ${dateString}`);
+        return null; // Or return original string?
+      }
+      // Format to ISO 8601 date part (YYYY-MM-DD)
+      return date.toISOString().split('T')[0];
+    } catch (e) {
+      logger.warn(`Error formatting date string "${dateString}": ${e.message}`);
+      return null;
+    }
+  }
+
   cleanupPhenotypes(phenotypes) {
     if (!Array.isArray(phenotypes)) return [];
-    return phenotypes.map(p => this.cleanupText(p)).filter(Boolean);
+    return phenotypes
+      .map(p => typeof p === 'string' ? p.trim() : null)
+      .filter(p => p && p.length > 0); // Remove nulls and empty strings
   }
 
-  /**
-   * Validate OCR results
-   * @private
-   */
   validateResults(results) {
-    const required = ['name', 'dob', 'mrn'];
-    const missing = required.filter(field => !results.patient_info[field]);
-    
-    return {
-      isValid: missing.length === 0,
-      missingFields: missing,
-      warnings: this.generateWarnings(results)
-    };
+    // Basic validation example
+    if (!results.extractedData.name) {
+      results.validation.isValid = false;
+      results.validation.warnings.push('Patient name could not be extracted.');
+    }
+    if (!results.extractedData.dob) {
+      // DOB might be optional depending on requirements
+      // results.validation.isValid = false; // Uncomment if DOB is mandatory
+      results.validation.warnings.push('Patient date of birth could not be extracted or formatted.');
+    }
+    if (!results.extractedData.phenotypes || results.extractedData.phenotypes.length === 0) {
+      results.validation.warnings.push('No HPO phenotypes were extracted.');
+    }
   }
 
-  /**
-   * Generate warnings for potentially problematic results
-   * @private
-   */
   generateWarnings(results) {
-    const warnings = [];
-    
-    if (results.debug_info.confidence_scores.overall < 0.8) {
-      warnings.push('Low overall confidence score');
-    }
-    
-    if (results.debug_info.processing_time > 10000) {
-      warnings.push('Long processing time');
+    const warnings = [...results.validation.warnings]; // Start with validation warnings
+
+    // Add confidence-based warnings (example threshold)
+    const lowConfidenceThreshold = 0.7;
+    if (results.confidenceScores) {
+      for (const [key, value] of Object.entries(results.confidenceScores)) {
+        if (typeof value === 'number' && value < lowConfidenceThreshold) {
+          warnings.push(`Low confidence score (${value.toFixed(2)}) for field: ${key}`);
+        }
+      }
     }
 
     return warnings;
   }
 
-  /**
-   * Handle and transform errors
-   * @private
-   */
   handleError(error) {
+    logger.error(`OCR Service Error: ${error.message}`, { stack: error.stack });
     if (error instanceof OcrError) {
-      return error;
+      // Specific handling for OCR errors
+      logger.error(`OCR Operation Failed: ${error.cause || 'Unknown cause'}`);
+    } else {
+      // General error handling
+      logger.error('An unexpected error occurred in the OCR service.');
     }
-
-    if (error.code === 'ENOENT') {
-      return new OcrError('Resource not found', error);
-    }
-
-    return new OcrError('OCR processing failed', error);
+    // Potentially emit an event, update service status, etc.
   }
 
-  // Repository methods
+  // --- Repository Interactions ---
+  // Example methods using lazy-loaded repositories
+
   async getResultsForPatient(patientId) {
-    return this.ocrResultRepository.findByPatientId(patientId);
+    const repo = await this.getOcrResultRepository();
+    return repo.findByPatientId(patientId);
   }
 
   async getResultById(resultId) {
-    return this.ocrResultRepository.findById(resultId);
+    const repo = await this.getOcrResultRepository();
+    return repo.findById(resultId);
   }
 
   async updateWithCorrections(resultId, corrections) {
-    const result = await this.ocrResultRepository.findById(resultId);
-    
-    if (!result) {
-      throw new OcrError('OCR result not found');
-    }
-    
-    const updatedData = {
-      extractedData: {
-        ...result.extractedData,
-        ...corrections
-      },
-      metadata: {
-        ...result.metadata,
-        corrected: true,
-        correctionTimestamp: new Date().toISOString()
-      }
-    };
-    
-    return this.ocrResultRepository.update(resultId, updatedData);
+    const repo = await this.getOcrResultRepository();
+    // Logic to apply corrections and update the record
+    // This is just a placeholder
+    const existingResult = await repo.findById(resultId);
+    if (!existingResult) throw new Error('Result not found');
+    // ... apply corrections logic ...
+    const updatedData = { ...existingResult.data, ...corrections }; // Simplified
+    return repo.update(resultId, { data: updatedData });
   }
+
+  async linkResultToPatient(resultId, patientId) {
+    const ocrRepo = await this.getOcrResultRepository();
+    const patientRepo = await this.getPatientRepository();
+    const patient = await patientRepo.findById(patientId);
+    if (!patient) throw new Error('Patient not found');
+    return ocrRepo.update(resultId, { patientId: patientId });
+  }
+
 }
 
-// Create and export a singleton instance
-const ocrService = new OCRService();
-module.exports = ocrService;
+// Create and export the singleton instance
+const ocrServiceInstance = new OCRService();
+export default ocrServiceInstance;

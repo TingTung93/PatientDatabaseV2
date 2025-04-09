@@ -4,7 +4,7 @@
  * Tracks client sessions, their last known state version,
  * and event subscriptions for targeted event distribution.
  */
-const logger = require('../utils/logger');
+import logger from '../utils/logger.js';
 
 class ClientSessionTracker {
   constructor() {
@@ -227,5 +227,6 @@ class ClientSessionTracker {
   }
 }
 
-// Export singleton instance
-module.exports = new ClientSessionTracker(); 
+// Create and export a singleton instance
+const clientSessionTracker = new ClientSessionTracker();
+export { clientSessionTracker as default }; 

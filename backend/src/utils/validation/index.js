@@ -1,15 +1,15 @@
-const BaseValidator = require('./BaseValidator');
-const PatientValidator = require('./PatientValidator');
-const ReportValidator = require('./ReportValidator');
-const CautionCardValidator = require('./CautionCardValidator');
-const UserValidator = require('./UserValidator');
-const RoleValidator = require('./RoleValidator');
+import BaseValidator from './BaseValidator.js';
+import PatientValidator from './PatientValidator.js';
+import ReportValidator from './ReportValidator.js';
+import CautionCardValidator from './CautionCardValidator.js';
+import UserValidator from './UserValidator.js';
+import RoleValidator from './RoleValidator.js';
 
-module.exports = {
-  BaseValidator,
-  PatientValidator,
-  ReportValidator,
-  CautionCardValidator,
-  UserValidator,
-  RoleValidator
+export {
+    BaseValidator,
+    PatientValidator,
+    ReportValidator,
+    CautionCardValidator,
+    UserValidator,
+    RoleValidator
 }; 

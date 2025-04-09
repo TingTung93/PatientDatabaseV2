@@ -92,4 +92,6 @@ class EventClassifier {
   }
 }
 
-module.exports = new EventClassifier(); 
+// Create and export a singleton instance
+const eventClassifier = new EventClassifier();
+export { eventClassifier as default }; 

@@ -5,9 +5,9 @@
  * Critical events are stored in the database, while standard and
  * transient events are stored in memory with different retention periods.
  */
-const { db } = require('../database/init');
-const EventClassifier = require('./EventClassifier');
-const logger = require('../utils/logger');
+import { db } from '../database/init.js';
+import eventClassifier from './EventClassifier.js';
+import logger from '../utils/logger.js';
 
 class PersistenceManager {
   constructor() {
@@ -34,12 +34,12 @@ class PersistenceManager {
    */
   async persistEvent(event) {
     try {
-      const importance = EventClassifier.getImportance(event.type);
+      const importance = eventClassifier.getImportance(event.type);
       
-      if (importance === EventClassifier.importanceLevels.CRITICAL) {
+      if (importance === eventClassifier.importanceLevels.CRITICAL) {
         // Store in database
         return await this.storeInDatabase(event);
-      } else if (importance === EventClassifier.importanceLevels.STANDARD) {
+      } else if (importance === eventClassifier.importanceLevels.STANDARD) {
         // Store in memory with longer retention
         return this.storeInMemory(event, 'standard');
       } else {
@@ -224,5 +224,6 @@ class PersistenceManager {
   }
 }
 
-// Export singleton instance
-module.exports = new PersistenceManager(); 
+// Create and export a singleton instance
+const persistenceManager = new PersistenceManager();
+export { persistenceManager as default }; 

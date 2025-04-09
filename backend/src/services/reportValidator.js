@@ -1,4 +1,4 @@
-const logger = require('../utils/logger');
+import logger from '../utils/logger.js';
 
 class ReportValidator {
     static validateHeader(header) {
@@ -180,6 +180,4 @@ class ReportValidator {
     }
 }
 
-module.exports = {
-    validateReport: ReportValidator.validateReport.bind(ReportValidator)
-}; 
+export const validateReport = ReportValidator.validateReport.bind(ReportValidator); 

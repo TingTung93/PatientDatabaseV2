@@ -1,5 +1,5 @@
-const { db } = require('../database/init');
-const logger = require('./logger');
+import { db } from '../database/init.js';
+import logger from './logger.js';
 
 /**
  * Parses a patient record line from the report
@@ -11,7 +11,7 @@ function parsePatientLine(line) {
 
     // Regular expression to match patient data line
     // Format: LASTNAME, FirstName MiddleName      MRN               DOB HH:MM     ABO/RH       PHENOTYPE    REQUIREMENTS  ANTIBODIES   ANTIGENS
-    const patientRegex = /^\s*([A-Za-z,\s\.\'-]+)\s+(\d+)\s+(\d{2}[A-Z]{3}\d{2})\s+(\d{2}:\d{2})\s+([A-Z][+-]?\s*(?:POS|NEG)?)\s+([A-Z\s<>]+)\s+([A-Z\s<>]+)\s+([A-Z\s<>]+)\s+([A-Z\s<>]+)/;
+    const patientRegex = /^\s*([A-Za-z,\s.'-]+)\s+(\d+)\s+(\d{2}[A-Z]{3}\d{2})\s+(\d{2}:\d{2})\s+([A-Z][+-]?\s*(?:POS|NEG)?)\s+([A-Z\s<>]+)\s+([A-Z\s<>]+)\s+([A-Z\s<>]+)\s+([A-Z\s<>]+)/;
     
     const notOnFileRegex = /<Not on File>/;
     const match = line.match(patientRegex);
@@ -207,7 +207,7 @@ async function processReport(reportContent) {
     }
 }
 
-module.exports = {
+export {
     parseReport,
     processReport
 };

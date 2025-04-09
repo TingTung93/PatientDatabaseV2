@@ -54,7 +54,7 @@
     "typescript": "^5.3.3"
   },
   "scripts": {
-    "start": "node server.js",
+    "start": "node src/server.js",
     "dev": "nodemon src/server.js",
     "build": "tsc",
     "db:init": "node src/database/init.js",

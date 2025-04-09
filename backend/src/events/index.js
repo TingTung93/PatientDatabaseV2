@@ -4,10 +4,10 @@
  * Exports all components of the event system and provides
  * convenience functions for emitting events.
  */
-const HybridEventSystem = require('./HybridEventSystem');
-const EventClassifier = require('./EventClassifier');
-const PersistenceManager = require('./PersistenceManager');
-const ClientSessionTracker = require('./ClientSessionTracker');
+import HybridEventSystem from './HybridEventSystem.js';
+import EventClassifier from './EventClassifier.js';
+import PersistenceManager from './PersistenceManager.js';
+import ClientSessionTracker from './ClientSessionTracker.js';
 
 /**
  * Emit an event to all subscribed clients
@@ -87,7 +87,7 @@ const emitSystemError = async (error, context) => {
 };
 
 // Export everything
-module.exports = {
+export {
   // Core components
   HybridEventSystem,
   EventClassifier,

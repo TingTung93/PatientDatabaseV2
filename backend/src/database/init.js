@@ -1,13 +1,21 @@
-const { Pool } = require('pg');
-const BetterSqlite3 = require('better-sqlite3');
-const path = require('path');
-const fs = require('fs');
-const logger = require('../utils/logger');
-require('dotenv').config();
+import pg from 'pg';
+import BetterSqlite3 from 'better-sqlite3';
+import path from 'path';
+import fs from 'fs';
+import logger from '../utils/logger.js';
+import dotenv from 'dotenv';
+import config from '../../config/config.js';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Environment variables are loaded in server.js
+
+const { Pool } = pg;
 
 // Initialize SQLite database
 const env = process.env.NODE_ENV || 'development';
-const config = require('../../config/config');
 const dbConfig = config[env].database;
 
 const sqliteDbPath = process.env.SQLITE_DB_PATH || dbConfig.path;
@@ -16,41 +24,88 @@ const db = new BetterSqlite3(sqliteDbPath, {
   fileMustExist: false // Allow creating new database file if it doesn't exist
 });
 
-// Create a new pool for PostgreSQL (for compatibility with existing code)
+let pool; // Don't create pool immediately
+
 const createPool = () => {
-  const poolConfig = {
-    host: process.env.DB_HOST || 'localhost',
-    port: process.env.DB_PORT || 5432,
-    database: process.env.DB_NAME || 'patient_info_test',
-    user: process.env.DB_USER || 'postgres',
-    password: process.env.DB_PASSWORD || 'postgres',
-  };
+  try {
+    // Debug: Log all relevant environment variables
+    logger.info('Environment variables:', {
+      NODE_ENV: process.env.NODE_ENV,
+      DB_HOST: process.env.DB_HOST,
+      DB_PORT: process.env.DB_PORT,
+      DB_NAME: process.env.DB_NAME,
+      DB_USER: process.env.DB_USER,
+      DB_PASSWORD: process.env.DB_PASSWORD ? '[SET]' : '[NOT SET]'
+    });
 
-  // Log pool configuration (excluding password)
-  logger.info('Creating database pool with config:', {
-    ...poolConfig,
-    password: '[REDACTED]'
-  });
+    // Ensure environment variables are loaded before accessing them
+    const poolConfig = {
+      host: process.env.DB_HOST || 'localhost',
+      port: parseInt(process.env.DB_PORT || '5432', 10),
+      database: process.env.DB_NAME || 'patient_info_test',
+      user: process.env.DB_USER,
+      password: process.env.DB_PASSWORD
+    };
 
-  return new Pool(poolConfig);
+    // Basic check for required variables
+    if (!poolConfig.user || !poolConfig.password) {
+      logger.error('Missing required PostgreSQL credentials (DB_USER, DB_PASSWORD). Check .env file loading.');
+      return null;
+    }
+
+    // Log pool configuration (excluding password)
+    logger.info('Creating PostgreSQL pool with config:', {
+      ...poolConfig,
+      password: '[REDACTED]'
+    });
+
+    const newPool = new Pool(poolConfig);
+
+    // Test the connection
+    newPool.on('error', (err) => {
+      logger.error('Unexpected error on idle PostgreSQL client', err);
+    });
+
+    return newPool;
+  } catch (error) {
+    logger.error('Error creating PostgreSQL pool:', error);
+    return null;
+  }
 };
-
-let pool = createPool();
 
 const initializeDatabase = async () => {
   try {
-    // Initialize SQLite tables
-    initSQLiteTables();
+    // Create the pool only when initializing
+    if (!pool) {
+        pool = createPool();
+    }
+    
+    // If pool creation failed (e.g., missing creds), don't proceed with PG connection
+    if (!pool) {
+        logger.error('PostgreSQL pool creation failed. Skipping PostgreSQL initialization.');
+        await initSQLiteTables(); // Initialize SQLite anyway
+        logger.info('Database initialization completed (SQLite only)');
+        return; 
+    }
 
-    // Test the PostgreSQL connection if available
+    // Test the PostgreSQL connection first
     try {
       await pool.query('SELECT NOW()');
       logger.info('PostgreSQL connection successful');
 
-      // Initialize PostgreSQL tables
-      await initPostgresTables();
+      // Note: We don't need to initialize PostgreSQL tables here anymore
+      // as they will be handled by Sequelize model synchronization
+      logger.info('PostgreSQL connection ready for Sequelize');
+
+      // Initialize SQLite tables
+      await initSQLiteTables();
     } catch (pgError) {
-      logger.warn('PostgreSQL connection failed, using SQLite only:', pgError.message);
+      logger.warn(`PostgreSQL connection failed: ${pgError.message}`);
+      logger.warn('Proceeding with SQLite only.');
+      // Consider logging pgError.code or the full error in debug mode
+      if (pgError.code === '28P01') { // Specific code for auth failure
+          logger.error('PostgreSQL Authentication Failed: Check DB_USER and DB_PASSWORD in your loaded .env file.');
+      }
     }
 
     logger.info('Database initialization completed');
@@ -88,7 +143,7 @@ function initSQLiteTables() {
         reportType TEXT,
         createdAt TEXT,
         updatedAt TEXT,
-        FOREIGN KEY (patientId) REFERENCES patients(id) ON DELETE CASCADE
+        FOREIGN KEY (patientId) REFERENCES patients(id) ON DELETE SET NULL
       )
     `).run();
 
@@ -134,7 +189,7 @@ function initSQLiteTables() {
 // Initialize PostgreSQL tables (for compatibility with existing code)
 async function initPostgresTables() {
   try {
-    // Create tables if they don't exist
+    // Create tables if they don't exist - execute statements separately
     await pool.query(`
       CREATE TABLE IF NOT EXISTS patients (
         id SERIAL PRIMARY KEY,
@@ -144,8 +199,9 @@ async function initPostgresTables() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         deleted_at TIMESTAMP
-      );
+      )`);
 
+    await pool.query(`
       CREATE TABLE IF NOT EXISTS reports (
         id SERIAL PRIMARY KEY,
         patient_id INTEGER REFERENCES patients(id),
@@ -155,8 +211,9 @@ async function initPostgresTables() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         deleted_at TIMESTAMP
-      );
+      )`);
 
+    await pool.query(`
       CREATE TABLE IF NOT EXISTS caution_cards (
         id SERIAL PRIMARY KEY,
         patient_id INTEGER REFERENCES patients(id),
@@ -173,8 +230,9 @@ async function initPostgresTables() {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         deleted_at TIMESTAMP
-      );
+      )`);
 
+    await pool.query(`
       CREATE TABLE IF NOT EXISTS training_data (
         id SERIAL PRIMARY KEY,
         report_id INTEGER REFERENCES reports(id),
@@ -184,8 +242,7 @@ async function initPostgresTables() {
         confidence_score FLOAT NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-    `);
+      )`);
 
     logger.info('PostgreSQL tables created successfully');
   } catch (error) {
@@ -200,7 +257,12 @@ const resetPool = async () => {
     if (pool) {
       await pool.end();
     }
-    pool = createPool();
+    pool = createPool(); // Recreate pool using the function
+    if (!pool) {
+        logger.error('Failed to recreate PostgreSQL pool during reset.');
+        return null; // Or handle as appropriate
+    }
+    logger.info('PostgreSQL pool reset.');
     return pool;
   } catch (error) {
     logger.error('Error resetting pool:', error);
@@ -208,16 +270,14 @@ const resetPool = async () => {
   }
 };
 
-// Export functions and the pool
-module.exports = {
-  db,
-  pool,
-  initializeDatabase,
-  resetPool
-};
+// Export the database instance and other utilities
+export { db, pool, initializeDatabase, resetPool };
 
 // If this file is run directly, initialize the database
-if (require.main === module) {
+// Get the current file path and the entry point script path
+const entryPoint = process.argv[1];
+
+if (entryPoint && path.resolve(entryPoint) === path.resolve(__filename)) {
   try {
     initializeDatabase();
     console.log('Database initialization complete');

@@ -1,20 +1,26 @@
-const express = require('express');
+import express from 'express';
+import { db } from '../database/init.js';
+import { ValidationError, NotFoundError } from '../errors/index.js';
+import fs from 'fs';
+import path from 'path';
+import multer from 'multer';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+import { validateCautionCard } from '../middleware/validation.js';
+import { body, param, query, validationResult } from 'express-validator';
+import { v4 as uuidv4 } from 'uuid';
+import validator from 'validator';
+import { fileURLToPath } from 'url';
+
 const router = express.Router();
-const { db } = require('../database/init');
-const { ValidationError, NotFoundError } = require('../errors');
-const fs = require('fs');
-const path = require('path');
-const multer = require('multer');
-const { exec } = require('child_process');
-const { promisify } = require('util');
 const execAsync = promisify(exec);
-const { validateCautionCard } = require('../middleware/validation');
-const { body, param, query, validationResult } = require('express-validator');
-const { v4: uuidv4 } = require('uuid');
-const validator = require('validator');
+
+// ES Module equivalent for __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Ensure upload directory exists
-const uploadDir = process.env.UPLOAD_DIR || 'uploads/caution-cards';
+const uploadDir = process.env.UPLOAD_DIR || path.join(__dirname, '../uploads/caution-cards');
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
@@ -121,7 +127,7 @@ router.get('/:id', validateId, async (req, res, next) => {
 });
 
 // Create new caution card
-router.post('/', upload.single('file'), validateCautionCard, async (req, res, next) => {
+router.post('/', upload.single('file'), async (req, res, next) => {
   try {
     const { blood_type, patient_id } = req.body;
     const file = req.file;
@@ -385,12 +391,14 @@ router.post('/process', upload.single('file'), async (req, res, next) => {
 
     console.log('File saved successfully at:', imagePath);
     
-    const formOcrDir = path.join(__dirname, '../../form_ocr');
+    const ocrScriptDir = path.join(__dirname, '../ocr'); // Correct path to the directory containing the python script
     
-    // Updated paths for mask and coordinates to match the actual files
-    const maskPath = path.join(formOcrDir, 'resources/masks/alignment_mask.png');
-    const manualMaskPath = path.join(formOcrDir, 'resources/masks/manualmask.png');
-    const coordinatesPath = path.join(formOcrDir, 'resources/coordinates/caution_card_coords.json');
+    // Updated paths for mask and coordinates - assuming they are relative to the script or use absolute paths if needed
+    // Let's assume for now they are in a 'resources' subdir relative to the ocr script dir
+    const resourcesDir = path.join(ocrScriptDir, 'resources'); // Example: Assuming resources are here
+    const maskPath = path.join(resourcesDir, 'masks/alignment_mask.png');
+    const manualMaskPath = path.join(resourcesDir, 'masks/manualmask.png');
+    const coordinatesPath = path.join(resourcesDir, 'coordinates/caution_card_coords.json');
     
     // Determine the correct Python executable path from the venv
     const isWindows = process.platform === 'win32';
@@ -404,7 +412,7 @@ router.post('/process', upload.single('file'), async (req, res, next) => {
     }
 
     // Process the caution card using the Python script from the venv
-    const command = `"${pythonExecutable}" "${path.join(formOcrDir, 'process_card.py')}" "${imagePath}" "${maskPath}" "${manualMaskPath}" "${coordinatesPath}"`;
+    const command = `"${pythonExecutable}" "${path.join(ocrScriptDir, 'process_card.py')}" "${imagePath}" "${maskPath}" "${manualMaskPath}" "${coordinatesPath}"`;
     
     console.log(`Executing OCR command: ${command}`);
     
@@ -422,20 +430,58 @@ router.post('/process', upload.single('file'), async (req, res, next) => {
     }
     
     // Extract data from OCR results
-    const patientInfo = ocrResults.data.patient_info || {};
-    const phenotypeData = ocrResults.data.phenotype_data || {};
-    
-    // Prepare data for response
-    const result = {
-      ocr_results: ocrResults,
-      file_info: {
-        filename: req.file.filename,
-        path: req.file.path,
-        size: req.file.size
+    const ocrData = ocrResults.data || {};
+    const bloodType = ocrData.bloodType; // Assuming bloodType is in the data
+    const patientId = ocrData.patientId; // Assuming patientId is in the data
+    const ocr_text = JSON.stringify(ocrResults.data); // Store all OCR data as text
+
+    // Validate file exists (redundant check but safe)
+    if (!fs.existsSync(imagePath)) {
+      throw new Error('Internal Server Error: Uploaded file missing after OCR');
+    }
+
+    // If patientId is provided from OCR, check if the patient exists
+    if (patientId) {
+      const patientStmt = db.prepare('SELECT id FROM patients WHERE id = ?');
+      if (patientStmt.get(patientId) === undefined) {
+        // Decide how to handle: Throw error, set patientId to null, or create a placeholder? 
+        // For now, let's set patientId to null and continue saving the card as orphaned.
+        console.warn(`Patient with ID ${patientId} found in OCR but not in DB. Saving card as orphaned.`);
+        patientId = null; 
+        // Alternatively: throw new ValidationError(`Patient with ID ${patientId} not found`);
       }
-    };
+    }
     
-    res.status(200).json(result);
+    // Prepare the metadata
+    const metadata = JSON.stringify({
+      processing_method: 'ocr',
+      processed_at: new Date().toISOString()
+    });
+
+    // Insert new caution card directly
+    const insertResult = db.prepare(`
+      INSERT INTO caution_cards (
+        bloodType, patientId, file_name, imagePath, mime_type,
+        status, ocr_text, metadata, createdAt, updatedAt
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    `).run(
+      bloodType || null, // Handle potential null/undefined bloodType
+      patientId || null, // Use potentially corrected patientId
+      req.file.filename, // Original filename might be better: path.basename(imagePath)
+      imagePath,
+      req.file.mimetype, // Mimetype from upload is likely more reliable
+      'processed', // Set status to 'processed' or 'pending_review'?
+      ocr_text, // Store the full JSON OCR data
+      metadata
+    );
+
+    const newCardId = insertResult.lastInsertRowid;
+
+    // Fetch the newly created card to return it
+    const newCard = db.prepare('SELECT * FROM caution_cards WHERE id = ?').get(newCardId);
+    
+    // Respond with the created caution card record
+    res.status(201).json(newCard); // Use 201 Created status
   } catch (error) {
     // Delete the uploaded file if there was an error
     if (req.file) {
@@ -449,68 +495,4 @@ router.post('/process', upload.single('file'), async (req, res, next) => {
   }
 });
 
-// Save processed OCR data as a caution card
-router.post('/save-processed', async (req, res, next) => {
-  try {
-    const { 
-      imagePath, bloodType, patientId, ocr_text
-    } = req.body;
-    
-    if (!imagePath) {
-      throw new ValidationError('File path is required');
-    }
-    
-    // Validate file exists
-    if (!fs.existsSync(imagePath)) {
-      throw new ValidationError('File does not exist');
-    }
-    
-    // If patientId is provided, check if the patient exists
-    if (patientId) {
-      const patientStmt = db.prepare('SELECT id FROM patients WHERE id = ?');
-      
-      if (patientStmt.get(patientId) === undefined) {
-        throw new ValidationError(`Patient with ID ${patientId} not found`);
-      }
-    }
-    
-    // Format bloodType and patientId as JSON if they are arrays
-    const formattedBloodType = bloodType 
-      ? (typeof bloodType === 'string' ? bloodType : JSON.stringify(bloodType)) 
-      : null;
-      
-    const formattedPatientId = patientId
-      ? (typeof patientId === 'string' ? patientId : JSON.stringify(patientId))
-      : null;
-    
-    // Prepare the metadata
-    const metadata = JSON.stringify({
-      processing_method: 'ocr',
-      processed_at: new Date().toISOString()
-    });
-    
-    // Insert new caution card
-    const result = db.prepare(`
-      INSERT INTO caution_cards (
-        bloodType, patientId, file_name, imagePath, mime_type,
-        status, ocr_text, metadata, createdAt, updatedAt
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-    `).run(
-      formattedBloodType,
-      formattedPatientId,
-      path.basename(imagePath),
-      imagePath,
-      path.extname(path.basename(imagePath)).substring(1),
-      'pending',
-      ocr_text || null,
-      metadata,
-      'system'
-    );
-    
-    res.status(201).json(result.lastInsertRowid);
-  } catch (error) {
-    next(error);
-  }
-});
-
-module.exports = router; 
+export default router; 

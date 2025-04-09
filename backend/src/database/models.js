@@ -1,2 +1,2 @@
-// Re-export database instance from init.js
-module.exports = require('./init');
+// Re-export models from models/index.js
+export * from './models/index.js';

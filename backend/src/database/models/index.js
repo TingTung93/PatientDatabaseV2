@@ -1,235 +1,235 @@
-const { pool } = require('../init');
-const PasswordReset = require('./PasswordReset');
+import { Sequelize, DataTypes, Model } from 'sequelize';
+import PasswordResetModel from './PasswordReset.js';
+import UserModel from './User.js'; // Import the new User model
 
-// Patient model
-const Patient = {
-  findAndCountAll: async (options) => {
-    const { limit = 10, offset = 0, where = {} } = options;
-    const values = [];
-    let whereClause = '';
-    
-    if (Object.keys(where).length > 0) {
-      whereClause = 'WHERE ' + Object.entries(where)
-        .map(([key, value], index) => {
-          values.push(value);
-          return `${key} = $${index + 1}`;
-        })
-        .join(' AND ');
-    }
+// --- Define Model Classes ---
+// We define the classes first, but don't initialize them yet.
 
-    const result = await pool.query(`
-      SELECT * FROM patients
-      ${whereClause}
-      ORDER BY created_at DESC
-      LIMIT $${values.length + 1} OFFSET $${values.length + 2}
-    `, [...values, limit, offset]);
+class Patient extends Model {}
+class Report extends Model {}
+class CautionCard extends Model {}
+class User extends Model {} // Define User class placeholder
+let PasswordReset; // Will be initialized later
 
-    const countResult = await pool.query(`
-      SELECT COUNT(*) as count FROM patients ${whereClause}
-    `, values);
-
-    return {
-      rows: result.rows,
-      count: parseInt(countResult.rows[0].count)
-    };
-  },
-
-  findByPk: async (id) => {
-    const result = await pool.query('SELECT * FROM patients WHERE id = $1', [id]);
-    return result.rows[0];
-  },
-
-  create: async (data) => {
-    const { first_name, last_name, date_of_birth, gender, contact_number, email, address } = data;
-    const result = await pool.query(`
-      INSERT INTO patients (
-        first_name, last_name, date_of_birth, gender,
-        contact_number, email, address
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7)
-      RETURNING *
-    `, [first_name, last_name, date_of_birth, gender, contact_number, email, address]);
-    return result.rows[0];
-  },
-
-  update: async (id, data) => {
-    const entries = Object.entries(data);
-    const setClause = entries
-      .map((_, index) => `${entries[index][0]} = $${index + 2}`)
-      .join(', ');
-    
-    const values = entries.map(entry => entry[1]);
-    const result = await pool.query(`
-      UPDATE patients
-      SET ${setClause}
-      WHERE id = $1
-      RETURNING *
-    `, [id, ...values]);
-    return result.rows[0];
-  },
-
-  destroy: async (id) => {
-    await pool.query('DELETE FROM patients WHERE id = $1', [id]);
+// --- Model Initializer Function ---
+// This function will be called AFTER sequelize is initialized in server.js
+const initializeModels = (sequelize) => {
+  if (!sequelize) {
+    throw new Error('Sequelize instance must be provided to initializeModels');
   }
+
+  // Initialize models - IMPORTANT: Initialize User BEFORE PasswordReset
+  const User = UserModel(sequelize); // Initialize User model
+  const Patient = PatientModel(sequelize, DataTypes);
+  const Report = ReportModel(sequelize, DataTypes);
+  const CautionCard = CautionCardModel(sequelize, DataTypes);
+  const PasswordReset = PasswordResetModel(sequelize, DataTypes);
+  
+  // --- Define Associations ---
+  // Use the static associate method if defined in the models
+  const models = { User, Patient, Report, CautionCard, PasswordReset };
+  Object.values(models).forEach(model => {
+    if (model.associate) {
+      model.associate(models);
+    }
+  });
+  
+  // If associate method is not used, define associations manually here:
+  // Example: 
+  // User.hasMany(PasswordReset, { foreignKey: 'user_id', as: 'passwordResets' });
+  // PasswordReset.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+  // Patient.hasMany(Report, { foreignKey: 'patient_id' });
+  // Report.belongsTo(Patient, { foreignKey: 'patient_id' });
+  // Patient.hasMany(CautionCard, { foreignKey: 'patient_id' });
+  // CautionCard.belongsTo(Patient, { foreignKey: 'patient_id' });
+
+  // Return the initialized models
+  return models;
 };
 
-// Report model
-const Report = {
-  findAndCountAll: async (options) => {
-    const { limit = 10, offset = 0, where = {} } = options;
-    const values = [];
-    let whereClause = '';
-    
-    if (Object.keys(where).length > 0) {
-      whereClause = 'WHERE ' + Object.entries(where)
-        .map(([key, value], index) => {
-          values.push(value);
-          return `${key} = $${index + 1}`;
-        })
-        .join(' AND ');
-    }
-
-    const result = await pool.query(`
-      SELECT r.*, p.first_name, p.last_name
-      FROM reports r
-      LEFT JOIN patients p ON r.patient_id = p.id
-      ${whereClause}
-      ORDER BY r.created_at DESC
-      LIMIT $${values.length + 1} OFFSET $${values.length + 2}
-    `, [...values, limit, offset]);
-
-    const countResult = await pool.query(`
-      SELECT COUNT(*) as count FROM reports ${whereClause}
-    `, values);
-
-    return {
-      rows: result.rows,
-      count: parseInt(countResult.rows[0].count)
-    };
-  },
-
-  findByPk: async (id) => {
-    const result = await pool.query(`
-      SELECT r.*, p.first_name, p.last_name
-      FROM reports r
-      LEFT JOIN patients p ON r.patient_id = p.id
-      WHERE r.id = $1
-    `, [id]);
-    return result.rows[0];
-  },
-
-  create: async (data) => {
-    const { patient_id, report_type, report_date, content, status } = data;
-    const result = await pool.query(`
-      INSERT INTO reports (
-        patient_id, report_type, report_date, content, status
-      ) VALUES ($1, $2, $3, $4, $5)
-      RETURNING *
-    `, [patient_id, report_type, report_date, content, status]);
-    return result.rows[0];
-  },
-
-  update: async (id, data) => {
-    const entries = Object.entries(data);
-    const setClause = entries
-      .map((_, index) => `${entries[index][0]} = $${index + 2}`)
-      .join(', ');
-    
-    const values = entries.map(entry => entry[1]);
-    const result = await pool.query(`
-      UPDATE reports
-      SET ${setClause}
-      WHERE id = $1
-      RETURNING *
-    `, [id, ...values]);
-    return result.rows[0];
-  },
-
-  destroy: async (id) => {
-    await pool.query('DELETE FROM reports WHERE id = $1', [id]);
-  }
+// --- Exports ---
+// Export the classes themselves and the initializer function.
+export {
+    Patient, // Export the class definition
+    Report,  // Export the class definition
+    CautionCard, // Export the class definition
+    User, // Export the class definition
+    PasswordReset, // Export the placeholder 
+    initializeModels
 };
 
-// CautionCard model
-const CautionCard = {
-  findAndCountAll: async (options) => {
-    const { limit = 10, offset = 0, where = {} } = options;
-    const values = [];
-    let whereClause = '';
-    
-    if (Object.keys(where).length > 0) {
-      whereClause = 'WHERE ' + Object.entries(where)
-        .map(([key, value], index) => {
-          values.push(value);
-          return `${key} = $${index + 1}`;
-        })
-        .join(' AND ');
+// Helper functions to wrap existing .init calls if models weren't defined via factory functions initially
+// (You might need to adjust these if your existing models weren't factory functions)
+const PatientModel = (sequelize, DataTypes) => {
+  Patient.init({ /* existing Patient.init object */ 
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true
+    },
+    first_name: {
+      type: DataTypes.STRING(100),
+      allowNull: false
+    },
+    last_name: {
+      type: DataTypes.STRING(100),
+      allowNull: false
+    },
+    date_of_birth: {
+      type: DataTypes.DATE,
+      allowNull: false
+    },
+    gender: {
+      type: DataTypes.STRING(10),
+      allowNull: true
+    },
+    contact_number: {
+      type: DataTypes.STRING(20),
+      allowNull: true
+    },
+    email: {
+      type: DataTypes.STRING(100),
+      allowNull: true
+    },
+    address: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
+    created_at: {
+      type: DataTypes.DATE,
+      defaultValue: Sequelize.fn('NOW')
+    },
+    updated_at: {
+      type: DataTypes.DATE,
+      defaultValue: Sequelize.fn('NOW')
+    },
+    deleted_at: {
+      type: DataTypes.DATE,
+      allowNull: true
     }
-
-    const result = await pool.query(`
-      SELECT c.*, p.first_name, p.last_name
-      FROM caution_cards c
-      LEFT JOIN patients p ON c.patient_id = p.id
-      ${whereClause}
-      ORDER BY c.created_at DESC
-      LIMIT $${values.length + 1} OFFSET $${values.length + 2}
-    `, [...values, limit, offset]);
-
-    const countResult = await pool.query(`
-      SELECT COUNT(*) as count FROM caution_cards ${whereClause}
-    `, values);
-
-    return {
-      rows: result.rows,
-      count: parseInt(countResult.rows[0].count)
-    };
-  },
-
-  findByPk: async (id) => {
-    const result = await pool.query(`
-      SELECT c.*, p.first_name, p.last_name
-      FROM caution_cards c
-      LEFT JOIN patients p ON c.patient_id = p.id
-      WHERE c.id = $1
-    `, [id]);
-    return result.rows[0];
-  },
-
-  create: async (data) => {
-    const { patient_id, blood_type, antibodies, transfusion_requirements, file_name, file_path, status } = data;
-    const result = await pool.query(`
-      INSERT INTO caution_cards (
-        patient_id, blood_type, antibodies, transfusion_requirements,
-        file_name, file_path, status
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7)
-      RETURNING *
-    `, [patient_id, blood_type, antibodies, transfusion_requirements, file_name, file_path, status]);
-    return result.rows[0];
-  },
-
-  update: async (id, data) => {
-    const entries = Object.entries(data);
-    const setClause = entries
-      .map((_, index) => `${entries[index][0]} = $${index + 2}`)
-      .join(', ');
-    
-    const values = entries.map(entry => entry[1]);
-    const result = await pool.query(`
-      UPDATE caution_cards
-      SET ${setClause}
-      WHERE id = $1
-      RETURNING *
-    `, [id, ...values]);
-    return result.rows[0];
-  },
-
-  destroy: async (id) => {
-    await pool.query('DELETE FROM caution_cards WHERE id = $1', [id]);
-  }
+  }, { sequelize, modelName: 'Patient', tableName: 'patients', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at', deletedAt: 'deleted_at', paranoid: true });
+  return Patient;
 };
 
-module.exports = {
-  Patient,
-  Report,
-  CautionCard,
-  PasswordReset: PasswordReset(sequelize, Sequelize.DataTypes)
-}; 
+const ReportModel = (sequelize, DataTypes) => {
+  Report.init({ /* existing Report.init object */ 
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true
+    },
+    patient_id: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: {
+        model: Patient,
+        key: 'id'
+      }
+    },
+    report_type: {
+      type: DataTypes.STRING(50),
+      allowNull: false
+    },
+    report_date: {
+      type: DataTypes.DATE,
+      allowNull: false
+    },
+    content: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
+    status: {
+      type: DataTypes.STRING(20),
+      defaultValue: 'pending'
+    },
+    created_at: {
+      type: DataTypes.DATE,
+      defaultValue: Sequelize.fn('NOW')
+    },
+    updated_at: {
+      type: DataTypes.DATE,
+      defaultValue: Sequelize.fn('NOW')
+    },
+    deleted_at: {
+      type: DataTypes.DATE,
+      allowNull: true
+    }
+  }, { sequelize, modelName: 'Report', tableName: 'reports', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at', deletedAt: 'deleted_at', paranoid: true });
+  return Report;
+};
+
+const CautionCardModel = (sequelize, DataTypes) => {
+  CautionCard.init({ /* existing CautionCard.init object */ 
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true
+    },
+    patient_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true, // Allow null if card is orphaned
+      references: {
+        model: Patient,
+        key: 'id'
+      }
+    },
+    blood_type: {
+      type: DataTypes.STRING(5),
+      allowNull: true
+    },
+    antibodies: {
+      type: DataTypes.JSONB,
+      allowNull: true
+    },
+    transfusion_requirements: {
+      type: DataTypes.JSONB,
+      allowNull: true
+    },
+    status: {
+      type: DataTypes.STRING(20),
+      defaultValue: 'pending'
+    },
+    file_name: {
+      type: DataTypes.STRING(255),
+      allowNull: true
+    },
+    imagePath: { // Corrected from file_path based on usage in routes
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      field: 'file_path' // Keep DB column name if it differs
+    },
+    mime_type: { // Added mime_type based on usage in routes
+        type: DataTypes.STRING(100),
+        allowNull: true
+    },
+    ocr_text: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
+    metadata: {
+      type: DataTypes.JSONB,
+      allowNull: true
+    },
+    reviewed_by: {
+      type: DataTypes.STRING(100),
+      allowNull: true
+    },
+    reviewed_date: {
+      type: DataTypes.DATE,
+      allowNull: true
+    },
+    created_at: {
+      type: DataTypes.DATE,
+      defaultValue: Sequelize.fn('NOW')
+    },
+    updated_at: {
+      type: DataTypes.DATE,
+      defaultValue: Sequelize.fn('NOW')
+    },
+    deleted_at: {
+      type: DataTypes.DATE,
+      allowNull: true
+    }
+  }, { sequelize, modelName: 'CautionCard', tableName: 'caution_cards', timestamps: true, createdAt: 'created_at', updatedAt: 'updated_at', deletedAt: 'deleted_at', paranoid: true });
+  return CautionCard;
+};

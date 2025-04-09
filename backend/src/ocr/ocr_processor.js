@@ -7,7 +7,7 @@ const logger = require('../utils/logger');
 
 class OCRProcessor {
   constructor() {
-    this.pythonPath = path.join(__dirname, '../../python/ocr_processor.py');
+    this.pythonPath = path.join(__dirname, 'ocr_processor.py');
     // Use the virtual environment's Python executable
     this.pythonExecutable = path.join(__dirname, '../../venv/Scripts/python.exe');
     this.preprocessedDir = path.join(__dirname, '../../uploads/preprocessed');
@@ -86,7 +86,7 @@ class OCRProcessor {
       ], {
         env: {
           ...process.env,
-          PYTHONPATH: path.join(__dirname, '../../python')
+          PYTHONPATH: path.join(__dirname)
         }
       });
 
@@ -150,7 +150,7 @@ class OCRProcessor {
       ], {
         env: {
           ...process.env,
-          PYTHONPATH: path.join(__dirname, '../../python')
+          PYTHONPATH: path.join(__dirname)
         }
       });
 

@@ -1,4 +1,4 @@
-const BaseValidator = require('./BaseValidator');
+import BaseValidator from './BaseValidator.js';
 
 class CautionCardValidator extends BaseValidator {
   constructor() {
@@ -21,10 +21,10 @@ class CautionCardValidator extends BaseValidator {
   validate(data) {
     this.clearErrors();
 
-    // Required fields
-    this.validateRequired(data, 'originalFilePath');
-    this.validateRequired(data, 'status');
-    this.validateRequired(data, 'metadata');
+    // Required fields - Pass fields as arrays
+    this.validateRequired(data, ['originalFilePath']);
+    this.validateRequired(data, ['status']);
+    this.validateRequired(data, ['metadata']);
 
     // Status validation
     if (data.status) {
@@ -159,4 +159,4 @@ class CautionCardValidator extends BaseValidator {
   }
 }
 
-module.exports = CautionCardValidator; 
+export default CautionCardValidator; 

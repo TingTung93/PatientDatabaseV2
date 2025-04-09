@@ -1,12 +1,16 @@
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs').promises;
-const { validateReport } = require('../services/reportValidator');
-const { parseReport } = require('../services/reportParser');
-const ReportStorageService = require('../services/reportStorageService');
-const logger = require('../utils/logger');
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs/promises'; // Use promises version of fs
+import { fileURLToPath } from 'url'; // Needed for __dirname replacement
+import { validateReport } from '../services/reportValidator.js'; // Add .js extension
+import { parseReport } from '../utils/reportParser.js'; // <<< CORRECTED PATH
+import ReportStorageService from '../services/reportStorageService.js'; // Add .js extension
+import logger from '../utils/logger.js'; // Add .js extension
+
+const __filename = fileURLToPath(import.meta.url); // ES Module equivalent for __filename
+const __dirname = path.dirname(__filename); // ES Module equivalent for __dirname
 
 // Configure multer for report uploads
 const storage = multer.diskStorage({
@@ -66,8 +70,6 @@ router.get('/', async (req, res, next) => {
 
 // Report upload endpoint
 router.post('/upload', upload.single('report'), async (req, res, next) => {
-    let transaction;
-    
     try {
         if (!req.file) {
             return res.status(400).json({
@@ -189,4 +191,4 @@ router.get('/patients/search', async (req, res, next) => {
     }
 });
 
-module.exports = router; 
+export default router; 

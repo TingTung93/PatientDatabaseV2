@@ -1,9 +1,10 @@
-const express = require('express');
+import express from 'express';
+import { body, param, query, validationResult } from 'express-validator';
+import { db } from '../database/init.js'; // Assume this uses ES modules now
+import { ValidationError, NotFoundError } from '../utils/errors.js';
+import { emitPatientCreated, emitPatientUpdated, emitPatientDeleted, emitPatientsUpdated } from '../events/index.js'; // Assume this uses ES modules
+
 const router = express.Router();
-const { body, param, query, validationResult } = require('express-validator');
-const { db } = require('../database/init');
-const { ValidationError, NotFoundError } = require('../errors');
-const { emitPatientCreated, emitPatientUpdated, emitPatientDeleted, emitPatientsUpdated } = require('../events');
 
 // Middleware to validate request
 const validate = (req, res, next) => {
@@ -248,7 +249,7 @@ router.post('/', [
   }
 });
 
-// Update a patient
+// Update an existing patient
 router.put('/:id', [
   param('id').isInt().toInt(),
   body('name').optional().isString(),
@@ -260,60 +261,46 @@ router.put('/:id', [
 ], async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, species, breed, bloodType, mrn } = req.body;
+    const updates = req.body;
 
     // Check if patient exists
     const checkStmt = db.prepare('SELECT * FROM patients WHERE id = ?');
-    const existingPatient = checkStmt.get(id);
+    const patient = checkStmt.get(id);
 
-    if (!existingPatient) {
+    if (!patient) {
       return res.status(404).json({ error: 'Patient not found' });
     }
 
-    // Build update query
-    let query = 'UPDATE patients SET updatedAt = datetime(\'now\')';
+    // Build update query dynamically
+    const fields = [];
     const params = [];
-
-    if (name !== undefined) {
-      query += ', name = ?';
-      params.push(name);
+    for (const [key, value] of Object.entries(updates)) {
+      // Only allow updating specific fields
+      if (['name', 'species', 'breed', 'bloodType', 'mrn'].includes(key)) {
+        fields.push(`${key} = ?`);
+        params.push(value);
+      }
     }
 
-    if (species !== undefined) {
-      query += ', species = ?';
-      params.push(species);
+    if (fields.length === 0) {
+      return res.status(400).json({ error: 'No valid fields provided for update' });
     }
 
-    if (breed !== undefined) {
-      query += ', breed = ?';
-      params.push(breed);
-    }
+    // Add updatedAt field
+    fields.push('updatedAt = datetime(\'now\')');
+    params.push(id); // Add ID for WHERE clause
 
-    if (bloodType !== undefined) {
-      query += ', bloodType = ?';
-      params.push(bloodType);
-    }
-
-    if (mrn !== undefined) {
-      query += ', mrn = ?';
-      params.push(mrn);
-    }
-
-    query += ' WHERE id = ?';
-    params.push(id);
-
-    // Execute update
-    const updateStmt = db.prepare(query);
-    updateStmt.run(...params);
+    const stmt = db.prepare(`UPDATE patients SET ${fields.join(', ')} WHERE id = ?`);
+    stmt.run(...params);
 
     // Fetch updated patient
     const getStmt = db.prepare('SELECT * FROM patients WHERE id = ?');
     const updatedPatient = getStmt.get(id);
-    
-    // Emit event for real-time updates
+
+    // Emit event
     await emitPatientUpdated(updatedPatient);
     await emitPatientsUpdated();
-
+    
     res.json(updatedPatient);
   } catch (error) {
     console.error('Error updating patient:', error);
@@ -330,214 +317,170 @@ router.delete('/:id', [
     const { id } = req.params;
 
     // Check if patient exists
-    const checkStmt = db.prepare('SELECT * FROM patients WHERE id = ?');
-    const existingPatient = checkStmt.get(id);
+    const checkStmt = db.prepare('SELECT id FROM patients WHERE id = ?');
+    const patient = checkStmt.get(id);
 
-    if (!existingPatient) {
+    if (!patient) {
       return res.status(404).json({ error: 'Patient not found' });
     }
 
-    // Delete patient
-    const deleteStmt = db.prepare('DELETE FROM patients WHERE id = ?');
-    deleteStmt.run(id);
-    
-    // Emit event for real-time updates
-    await emitPatientDeleted(id);
-    await emitPatientsUpdated();
+    const stmt = db.prepare('DELETE FROM patients WHERE id = ?');
+    const result = stmt.run(id);
 
-    res.json({ message: 'Patient deleted successfully' });
+    if (result.changes > 0) {
+      // Emit event
+      await emitPatientDeleted(id);
+      await emitPatientsUpdated();
+      res.status(204).send(); // No Content
+    } else {
+      // Should not happen if check passed, but for safety
+      res.status(404).json({ error: 'Patient not found' });
+    }
   } catch (error) {
     console.error('Error deleting patient:', error);
     res.status(500).json({ error: 'Failed to delete patient' });
   }
 });
 
-// Batch operation endpoint for multiple patients
-router.post('/batch', [
-  body('operations').isArray(),
-  body('operations.*.operation').isIn(['create', 'update', 'delete']),
-  body('operations.*.patient').optional(),
-  body('operations.*.id').optional().isInt(),
-  validate
+// Get HPO suggestions based on search term
+router.get('/hpo-suggestions', [
+  query('term').notEmpty().isString().isLength({ min: 3 })
 ], async (req, res) => {
-  const { operations } = req.body;
-  
   try {
-    // Start transaction
-    db.prepare('BEGIN TRANSACTION').run();
-    
-    const results = [];
-    let hasChanges = false;
-    
-    for (const op of operations) {
-      try {
-        switch (op.operation) {
-          case 'create': {
-            const { name, species, breed, bloodType, mrn } = op.patient;
-            
-            if (!name || !species) {
-              results.push({ 
-                operation: op.operation, 
-                success: false, 
-                error: 'Missing required fields' 
-              });
-              continue;
-            }
-            
-            const stmt = db.prepare(`
-              INSERT INTO patients (name, species, breed, bloodType, mrn, createdAt, updatedAt)
-              VALUES (?, ?, ?, ?, ?, datetime('now'), datetime('now'))
-            `);
-            
-            const result = stmt.run(
-              name, 
-              species, 
-              breed || null, 
-              bloodType || null, 
-              mrn || null
-            );
-            
-            // Fetch created patient
-            const getStmt = db.prepare('SELECT * FROM patients WHERE id = ?');
-            const newPatient = getStmt.get(result.lastInsertRowid);
-            
-            results.push({ 
-              operation: op.operation, 
-              success: true, 
-              data: newPatient 
-            });
-            
-            hasChanges = true;
-            break;
-          }
-          
-          case 'update': {
-            const { id } = op;
-            const updateData = op.patient;
-            
-            if (!id) {
-              results.push({ 
-                operation: op.operation, 
-                success: false, 
-                error: 'Missing ID for update operation' 
-              });
-              continue;
-            }
-            
-            // Check if patient exists
-            const checkStmt = db.prepare('SELECT * FROM patients WHERE id = ?');
-            const existingPatient = checkStmt.get(id);
-            
-            if (!existingPatient) {
-              results.push({ 
-                operation: op.operation, 
-                success: false, 
-                error: 'Patient not found', 
-                id 
-              });
-              continue;
-            }
-            
-            // Build update query
-            let query = 'UPDATE patients SET updatedAt = datetime(\'now\')';
-            const params = [];
-            
-            for (const [key, value] of Object.entries(updateData)) {
-              if (['name', 'species', 'breed', 'bloodType', 'mrn'].includes(key)) {
-                query += `, ${key} = ?`;
-                params.push(value);
-              }
-            }
-            
-            query += ' WHERE id = ?';
-            params.push(id);
-            
-            // Execute update
-            const updateStmt = db.prepare(query);
-            updateStmt.run(...params);
-            
-            // Fetch updated patient
-            const getStmt = db.prepare('SELECT * FROM patients WHERE id = ?');
-            const updatedPatient = getStmt.get(id);
-            
-            results.push({ 
-              operation: op.operation, 
-              success: true, 
-              data: updatedPatient 
-            });
-            
-            hasChanges = true;
-            break;
-          }
-          
-          case 'delete': {
-            const { id } = op;
-            
-            if (!id) {
-              results.push({ 
-                operation: op.operation, 
-                success: false, 
-                error: 'Missing ID for delete operation' 
-              });
-              continue;
-            }
-            
-            // Check if patient exists
-            const checkStmt = db.prepare('SELECT * FROM patients WHERE id = ?');
-            const existingPatient = checkStmt.get(id);
-            
-            if (!existingPatient) {
-              results.push({ 
-                operation: op.operation, 
-                success: false, 
-                error: 'Patient not found', 
-                id 
-              });
-              continue;
-            }
-            
-            // Delete patient
-            const deleteStmt = db.prepare('DELETE FROM patients WHERE id = ?');
-            deleteStmt.run(id);
-            
-            results.push({ 
-              operation: op.operation, 
-              success: true, 
-              id 
-            });
-            
-            hasChanges = true;
-            break;
-          }
-        }
-      } catch (opError) {
-        results.push({ 
-          operation: op.operation, 
-          success: false, 
-          error: opError.message 
-        });
-      }
-    }
-    
-    // Commit transaction
-    db.prepare('COMMIT').run();
-    
-    // Emit event if any changes were made
-    if (hasChanges) {
-      await emitPatientsUpdated();
-    }
-    
-    res.json({
-      success: true,
-      results
-    });
+    const { term } = req.query;
+    const stmt = db.prepare(`
+      SELECT id, name, definition FROM hpo_terms
+      WHERE name LIKE ? OR synonyms LIKE ?
+      LIMIT 10
+    `);
+    const suggestions = stmt.all(`%${term}%`, `%${term}%`);
+    res.json(suggestions);
   } catch (error) {
-    // Rollback transaction on error
-    db.prepare('ROLLBACK').run();
-    
-    console.error('Error in batch operation:', error);
-    res.status(500).json({ error: 'Failed to process batch operation' });
+    console.error('Error fetching HPO suggestions:', error);
+    res.status(500).json({ error: 'Failed to fetch HPO suggestions' });
   }
 });
 
-module.exports = router;
+// Get patient by MRN
+router.get('/mrn/:mrn', [
+  param('mrn').notEmpty().isString(),
+  validate
+], async (req, res) => {
+  try {
+    const { mrn } = req.params;
+    const stmt = db.prepare('SELECT * FROM patients WHERE mrn = ?');
+    const patient = stmt.get(mrn);
+    if (!patient) {
+      return res.status(404).json({ error: 'Patient not found with the given MRN' });
+    }
+    res.json(patient);
+  } catch (error) {
+    console.error('Error fetching patient by MRN:', error);
+    res.status(500).json({ error: 'Failed to fetch patient by MRN' });
+  }
+});
+
+// Add a phenotype to a patient
+router.post('/:patientId/phenotypes', [
+  param('patientId').isInt().toInt(),
+  body('hpoId').notEmpty().isString(),
+  validate
+], async (req, res) => {
+  try {
+    const { patientId } = req.params;
+    const { hpoId } = req.body;
+
+    // Check if patient exists
+    const patientStmt = db.prepare('SELECT id FROM patients WHERE id = ?');
+    if (!patientStmt.get(patientId)) {
+      return res.status(404).json({ error: 'Patient not found' });
+    }
+
+    // Check if HPO term exists
+    const hpoStmt = db.prepare('SELECT id FROM hpo_terms WHERE id = ?');
+    if (!hpoStmt.get(hpoId)) {
+      return res.status(404).json({ error: 'HPO term not found' });
+    }
+
+    // Check for existing association
+    const checkStmt = db.prepare('SELECT * FROM patient_phenotypes WHERE patient_id = ? AND hpo_id = ?');
+    if (checkStmt.get(patientId, hpoId)) {
+      return res.status(409).json({ error: 'Phenotype already associated with this patient' });
+    }
+
+    // Add association
+    const insertStmt = db.prepare('INSERT INTO patient_phenotypes (patient_id, hpo_id) VALUES (?, ?)');
+    insertStmt.run(patientId, hpoId);
+
+    // Fetch updated patient data (or just the phenotypes)
+    const phenotypesStmt = db.prepare(`
+      SELECT ht.id, ht.name FROM hpo_terms ht
+      JOIN patient_phenotypes pp ON ht.id = pp.hpo_id
+      WHERE pp.patient_id = ?
+    `);
+    const phenotypes = phenotypesStmt.all(patientId);
+    
+    // Optionally emit an update event
+    await emitPatientsUpdated(); // Could refine to update just this patient
+
+    res.status(201).json(phenotypes);
+
+  } catch (error) {
+    console.error('Error adding phenotype to patient:', error);
+    res.status(500).json({ error: 'Failed to add phenotype' });
+  }
+});
+
+// Remove a phenotype from a patient
+router.delete('/:patientId/phenotypes/:hpoId', [
+  param('patientId').isInt().toInt(),
+  param('hpoId').notEmpty().isString(),
+  validate
+], async (req, res) => {
+  try {
+    const { patientId, hpoId } = req.params;
+
+    const stmt = db.prepare('DELETE FROM patient_phenotypes WHERE patient_id = ? AND hpo_id = ?');
+    const result = stmt.run(patientId, hpoId);
+
+    if (result.changes > 0) {
+      // Optionally emit an update event
+      await emitPatientsUpdated(); // Could refine to update just this patient
+      res.status(204).send();
+    } else {
+      res.status(404).json({ error: 'Phenotype association not found' });
+    }
+  } catch (error) {
+    console.error('Error removing phenotype from patient:', error);
+    res.status(500).json({ error: 'Failed to remove phenotype' });
+  }
+});
+
+// Get phenotypes for a specific patient
+router.get('/:patientId/phenotypes', [
+  param('patientId').isInt().toInt(),
+  validate
+], async (req, res) => {
+  try {
+    const { patientId } = req.params;
+    
+    // Check if patient exists
+    const patientStmt = db.prepare('SELECT id FROM patients WHERE id = ?');
+    if (!patientStmt.get(patientId)) {
+      return res.status(404).json({ error: 'Patient not found' });
+    }
+
+    const stmt = db.prepare(`
+      SELECT ht.id, ht.name, ht.definition FROM hpo_terms ht
+      JOIN patient_phenotypes pp ON ht.id = pp.hpo_id
+      WHERE pp.patient_id = ?
+    `);
+    const phenotypes = stmt.all(patientId);
+    res.json(phenotypes);
+  } catch (error) {
+    console.error('Error fetching phenotypes for patient:', error);
+    res.status(500).json({ error: 'Failed to fetch phenotypes' });
+  }
+});
+
+export default router;

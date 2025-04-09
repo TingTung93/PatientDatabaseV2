@@ -1,7 +1,14 @@
 const { Model, DataTypes } = require('sequelize');
 
 module.exports = (sequelize, Sequelize) => {
-  class OcrResult extends Model {}
+  class OcrResult extends Model {
+    static associate(models) {
+      OcrResult.belongsTo(models.Patient, {
+        foreignKey: 'patientId',
+        as: 'patient'
+      });
+    }
+  }
 
   OcrResult.init({
     id: {
@@ -12,7 +19,7 @@ module.exports = (sequelize, Sequelize) => {
     
     patientId: {
       type: DataTypes.UUID,
-      allowNull: true,
+      allowNull: true, // Allow null for orphaned records
       references: {
         model: 'Patients',
         key: 'id'
@@ -61,6 +68,12 @@ module.exports = (sequelize, Sequelize) => {
         isIn: [['processing', 'processed', 'failed']]
       }
     },
+
+    mrn: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      comment: 'Medical Record Number'
+    },
     
     errorMessage: {
       type: DataTypes.STRING,
@@ -70,8 +83,15 @@ module.exports = (sequelize, Sequelize) => {
   }, {
     sequelize,
     modelName: 'OcrResult',
-    tableName: 'OcrResults',
-    timestamps: true
+    tableName: 'ocr_results',
+    timestamps: true,
+    indexes: [
+      {
+        name: 'ocr_patient_idx',
+        fields: ['patientId']
+      }
+    ],
+    comment: 'Stores OCR processing results for caution cards'
   });
 
   return OcrResult;

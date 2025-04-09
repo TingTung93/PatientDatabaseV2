@@ -1,15 +1,19 @@
-const path = require('path');
+import path from 'path';
+import { fileURLToPath } from 'url';
+import express from 'express';
+import { body, param, query, validationResult } from 'express-validator';
+import multer from 'multer';
+import { v4 as uuidv4 } from 'uuid';
+// import validator from 'validator'; // Seems unused, commented out
 
-const express = require('express');
-const { body, param, query, validationResult } = require('express-validator');
-const multer = require('multer');
-const { v4: uuidv4 } = require('uuid');
-const validator = require('validator');
+import CautionCardController from '../controllers/CautionCardController.js'; // Added .js
+import { ApiError } from '../middleware/errorHandler.js'; // Added .js
+import validateRequest from '../middleware/validateRequest.js'; // Added .js
+import logger from '../utils/logger.js'; // Added .js
 
-const CautionCardController = require('../controllers/CautionCardController');
-const { ApiError } = require('../middleware/errorHandler');
-const validateRequest = require('../middleware/validateRequest');
-const logger = require('../utils/logger');
+// ES Module equivalent for __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
@@ -62,7 +66,7 @@ const validateFinalize = [
       }
       return true;
     }),
-  validateRequest
+  validateRequest // Assuming validateRequest is designed to work with express-validator result
 ];
 
 const validateList = [
@@ -72,151 +76,172 @@ const validateList = [
   query('offset').optional().isInt({ min: 0 }).withMessage('Offset must be non-negative')
 ];
 
-// Create router factory function
-const createCautionCardsRouter = (controller) => {
-  const router = express.Router();
-  const cautionCardController = controller || new CautionCardController();
+// Create router
+const router = express.Router();
+const cautionCardController = new CautionCardController(); // Instantiate controller directly
 
-  // POST /api/v1/caution-cards/process - Upload card, trigger OCR, initial save (Async)
-  router.post('/process', (req, res, next) => {
-    upload.single('file')(req, res, async (err) => {
-      try {
-        logger.info('Received request to process caution card');
-        
-        // Handle multer errors
-        if (err) {
-          if (err instanceof ApiError) {
-            throw err;
-          }
-          if (err instanceof multer.MulterError) {
-            if (err.code === 'LIMIT_FILE_SIZE') {
-              throw ApiError.badRequest('File size exceeds 10MB limit');
-            }
-            throw ApiError.badRequest(err.message);
-          }
-          throw ApiError.badRequest('Error uploading file');
+// POST /api/v1/caution-cards/process - Upload card, trigger OCR, initial save (Async)
+router.post('/process', (req, res, next) => {
+  upload.single('file')(req, res, async (err) => {
+    try {
+      logger.info('Received request to process caution card');
+      
+      // Handle multer errors
+      if (err) {
+        if (err instanceof ApiError) {
+          throw err;
         }
-
-        // Validate file presence
-        if (!req.file) {
-          throw ApiError.badRequest('No file uploaded or invalid file type');
+        if (err instanceof multer.MulterError) {
+          if (err.code === 'LIMIT_FILE_SIZE') {
+            throw ApiError.badRequest('File size exceeds 10MB limit');
+          }
+          throw ApiError.badRequest(err.message);
         }
+        throw ApiError.badRequest('Error uploading file');
+      }
 
-        // Process the card
-        const result = await cautionCardController.processCard(req.file);
+      // Validate file presence
+      if (!req.file) {
+        throw ApiError.badRequest('No file uploaded or invalid file type');
+      }
 
-        // Return accepted status since OCR processing is async
-        res.status(202).json({
-          status: 'success',
-          data: result,
-          message: 'Card upload accepted, OCR processing started'
+      // Process the card
+      const result = await cautionCardController.processCard(req.file);
+
+      // Return accepted status since OCR processing is async
+      res.status(202).json({
+        status: 'success',
+        data: result,
+        message: 'Card upload accepted, OCR processing started'
+      });
+    } catch (error) {
+      // Clean up uploaded file if processing fails
+      if (req.file) {
+        // Use import() for fs within async function as require is not available
+        const fs = await import('fs/promises'); 
+        fs.unlink(req.file.path).catch(err => {
+          logger.error('Failed to clean up uploaded file:', err);
         });
-      } catch (error) {
-        // Clean up uploaded file if processing fails
-        if (req.file) {
-          const fs = require('fs').promises;
-          fs.unlink(req.file.path).catch(err => {
-            logger.error('Failed to clean up uploaded file:', err);
-          });
-        }
-        next(error);
       }
+      next(error);
+    }
+  });
+});
+
+// PUT /api/v1/caution-cards/:id/finalize - Save reviewed data, link or mark as orphan
+router.put('/:id/finalize', validateFinalize, async (req, res, next) => {
+  try {
+    // Check validation results (needed when not using a dedicated middleware factory)
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { id } = req.params;
+    const { reviewedData, linkedPatientId, isOrphaned } = req.body;
+
+    logger.info(`Finalizing caution card ${id}`, {
+      isOrphaned,
+      hasLinkedPatient: !!linkedPatientId
     });
-  });
 
-  // PUT /api/v1/caution-cards/:id/finalize - Save reviewed data, link or mark as orphan
-  router.put('/:id/finalize', validateFinalize, async (req, res, next) => {
-    try {
-      const { id } = req.params;
-      const { reviewedData, linkedPatientId, isOrphaned } = req.body;
+    const result = await cautionCardController.finalizeCard(
+      id,
+      reviewedData,
+      isOrphaned,
+      linkedPatientId
+    );
 
-      logger.info(`Finalizing caution card ${id}`, {
-        isOrphaned,
-        hasLinkedPatient: !!linkedPatientId
-      });
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+});
 
-      const result = await cautionCardController.finalizeCard(
-        id,
-        reviewedData,
-        isOrphaned,
-        linkedPatientId
-      );
-
-      res.json(result);
-    } catch (error) {
-      next(error);
+// GET /api/v1/caution-cards/:id - Get card details
+router.get('/:id', validateUuid, validateRequest, async (req, res, next) => {
+  try {
+     // Check validation results (needed when not using a dedicated middleware factory)
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
     }
-  });
 
-  // GET /api/v1/caution-cards/:id - Get card details
-  router.get('/:id', validateUuid, validateRequest, async (req, res, next) => {
-    try {
-      logger.debug(`>>> ENTERING GET /caution-cards/${req.params.id} handler`);
-      const { id } = req.params;
-      logger.info(`Received request to get caution card ${id}`);
+    logger.debug(`>>> ENTERING GET /caution-cards/${req.params.id} handler`);
+    const { id } = req.params;
+    logger.info(`Received request to get caution card ${id}`);
 
-      const result = await cautionCardController.getCard(id);
-      if (!result) {
-        throw ApiError.notFound('Caution card not found');
-      }
-
-      res.json({
-        status: 'success',
-        data: result
-      });
-    } catch (error) {
-      next(error);
+    const result = await cautionCardController.getCard(id);
+    if (!result) {
+      throw ApiError.notFound('Caution card not found');
     }
-  });
 
-  // GET /api/v1/caution-cards/:id/suggestions - Get patient link suggestions
-  router.get('/:id/suggestions', validateUuid, validateRequest, async (req, res, next) => {
-    try {
-      logger.debug(`>>> ENTERING GET /caution-cards/${req.params.id}/suggestions handler`);
-      const { id } = req.params;
-      logger.info(`Received request for suggestions for caution card ${id}`);
+    res.json({
+      status: 'success',
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+});
 
-      const result = await cautionCardController.getSuggestions(id);
-      if (!result) {
-        throw ApiError.notFound('Caution card not found');
-      }
-
-      res.json({
-        status: 'success',
-        data: result
-      });
-    } catch (error) {
-      next(error);
+// GET /api/v1/caution-cards/:id/suggestions - Get patient link suggestions
+router.get('/:id/suggestions', validateUuid, validateRequest, async (req, res, next) => {
+  try {
+     // Check validation results (needed when not using a dedicated middleware factory)
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
     }
-  });
 
-  // GET /api/v1/caution-cards - List/Search caution cards
-  router.get('/', validateList, validateRequest, async (req, res, next) => {
-    try {
-      const { status, search, limit, offset } = req.query;
-      logger.info('Received request to list caution cards');
+    logger.debug(`>>> ENTERING GET /caution-cards/${req.params.id}/suggestions handler`);
+    const { id } = req.params;
+    logger.info(`Received request for suggestions for caution card ${id}`);
 
-      const result = await cautionCardController.listCards({
-        status,
-        search,
-        limit: parseInt(limit) || 10,
-        offset: parseInt(offset) || 0
-      });
-
-      if (!result) {
-        throw ApiError.serverError('Failed to list cards');
-      }
-
-      res.json({
-        status: 'success',
-        data: result
-      });
-    } catch (error) {
-      next(error);
+    const result = await cautionCardController.getSuggestions(id);
+    if (!result) {
+      throw ApiError.notFound('Caution card not found');
     }
-  });
 
-  return router;
-};
+    res.json({
+      status: 'success',
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+});
 
-module.exports = createCautionCardsRouter;
+// GET /api/v1/caution-cards - List/Search caution cards
+router.get('/', validateList, validateRequest, async (req, res, next) => {
+  try {
+     // Check validation results (needed when not using a dedicated middleware factory)
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { status, search, limit, offset } = req.query;
+    logger.info('Received request to list caution cards');
+
+    const result = await cautionCardController.listCards({
+      status,
+      search,
+      limit: parseInt(limit) || 10,
+      offset: parseInt(offset) || 0
+    });
+
+    if (!result) {
+      throw ApiError.serverError('Failed to list cards');
+    }
+
+    res.json({
+      status: 'success',
+      data: result
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+export default router;

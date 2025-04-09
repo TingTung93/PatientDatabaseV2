@@ -1,8 +1,8 @@
-const crypto = require('crypto');
-const { Report, PatientRecord } = require('../database/models');
-const { sequelize } = require('../database/db');
-const logger = require('../utils/logger');
-const errors = require('../errors');
+import crypto from 'crypto';
+import { Report, Patient } from '../database/models.js';
+import { getSequelize } from '../database/db.js';
+import logger from '../utils/logger.js';
+import { ValidationError } from '../errors/index.js';
 
 class ReportStorageService {
     static calculateChecksum(content) {
@@ -14,11 +14,12 @@ class ReportStorageService {
 
     static async getAllReports(page = 1, limit = 10) {
         try {
+            const sequelize = getSequelize();
             const offset = (page - 1) * limit;
 
             const reports = await Report.findAndCountAll({
                 include: [{
-                    model: PatientRecord,
+                    model: Patient,
                     as: 'patientRecords'
                 }],
                 limit,
@@ -37,6 +38,7 @@ class ReportStorageService {
     }
 
     static async storeReport(reportData, fileContent, originalFilename, userId = null) {
+        const sequelize = getSequelize();
         const transaction = await sequelize.transaction();
 
         try {
@@ -52,7 +54,7 @@ class ReportStorageService {
 
             // If duplicates found, throw an error to trigger rollback
             if (duplicates.length > 0) {
-                throw new errors.ValidationError(`Duplicate medical record numbers found: ${duplicates.join(', ')}`);
+                throw new ValidationError(`Duplicate medical record numbers found: ${duplicates.join(', ')}`);
             }
 
             // Create report record
@@ -70,7 +72,7 @@ class ReportStorageService {
             // Store patient records
             const patientRecords = await Promise.all(
                 reportData.patients.map(async (patient) => {
-                    return PatientRecord.create({
+                    return Patient.create({
                         reportId: report.id,
                         lastName: patient.lastName,
                         firstName: patient.firstName,
@@ -107,12 +109,12 @@ class ReportStorageService {
             logger.error('Error storing report:', error);
 
             // Re-throw specific errors or a generic one
-            if (error instanceof errors.ValidationError) {
+            if (error instanceof ValidationError) {
                 throw error;
             }
             // Check for Sequelize constraint errors specifically if needed
             if (error.name === 'SequelizeUniqueConstraintError') {
-                 throw new errors.ValidationError('Database constraint violation', error.errors?.map(e => e.message));
+                 throw new ValidationError('Database constraint violation', error.errors?.map(e => e.message));
             }
             throw new Error('Failed to store report data');
         }
@@ -122,7 +124,7 @@ class ReportStorageService {
         try {
             const report = await Report.findByPk(reportId, {
                 include: [{
-                    model: PatientRecord,
+                    model: Patient,
                     as: 'patientRecords'
                 }]
             });
@@ -140,12 +142,13 @@ class ReportStorageService {
 
     static async getReportsByFacility(facilityId, page = 1, limit = 10) {
         try {
+            const sequelize = getSequelize();
             const offset = (page - 1) * limit;
 
             const reports = await Report.findAndCountAll({
                 where: { facilityId },
                 include: [{
-                    model: PatientRecord,
+                    model: Patient,
                     as: 'patientRecords'
                 }],
                 limit,
@@ -167,6 +170,7 @@ class ReportStorageService {
 
     static async searchPatients(searchParams, page = 1, limit = 10) {
         try {
+            const sequelize = getSequelize();
             const offset = (page - 1) * limit;
             const where = {};
 
@@ -183,7 +187,7 @@ class ReportStorageService {
                 where.bloodType = searchParams.bloodType;
             }
 
-            const patients = await PatientRecord.findAndCountAll({
+            const patients = await Patient.findAndCountAll({
                 where,
                 include: [{
                     model: Report,
@@ -207,4 +211,4 @@ class ReportStorageService {
     }
 }
 
-module.exports = ReportStorageService; 
+export default ReportStorageService; 

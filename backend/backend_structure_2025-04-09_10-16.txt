@@ -1,0 +1,704 @@
+Folder map of i:\PatientDatabaseV2\backend
+==================================================
+
+├── __tests__/
+│   ├── database/
+│   │   ├── db.test.js
+│   │   └── models.test.js
+│   ├── fixtures/
+│   │   └── users.js
+│   ├── helpers/
+│   │   ├── dbCleanup.js
+│   │   ├── testDb.js
+│   │   └── testUtils.js
+│   ├── middleware/
+│   │   ├── fileValidation.test.js
+│   │   ├── fileValidationStandalone.test.js
+│   │   ├── security.test.js
+│   │   └── virusScanning.test.js
+│   ├── migrations/
+│   │   └── training_data_tables.test.js
+│   ├── routes/
+│   │   ├── auth.test.js
+│   │   ├── auth.test.py
+│   │   ├── patient.test.js
+│   │   ├── patient.test.py
+│   │   ├── patients.test.js
+│   │   ├── training.test.js
+│   │   └── transfusion.test.js
+│   ├── services/
+│   │   ├── ocr-processor.test.js
+│   │   └── reportService.test.js
+│   └── setup.js
+├── .roo/
+├── config/
+│   └── config.js
+├── coverage/
+│   ├── lcov-report/
+│   │   ├── config/
+│   │   │   ├── config.js.html
+│   │   │   └── index.html
+│   │   ├── src/
+│   │   │   ├── config/
+│   │   │   │   ├── __tests__/
+│   │   │   │   │   ├── envValidator.test.js.html
+│   │   │   │   │   └── index.html
+│   │   │   │   ├── config.js.html
+│   │   │   │   ├── database.js.html
+│   │   │   │   ├── envValidator.js.html
+│   │   │   │   ├── index.html
+│   │   │   │   ├── test.config.js.html
+│   │   │   │   └── upload.config.js.html
+│   │   │   ├── controllers/
+│   │   │   │   ├── __tests__/
+│   │   │   │   │   ├── CautionCardController.test.js.html
+│   │   │   │   │   ├── index.html
+│   │   │   │   │   └── OrphanedCardController.test.js.html
+│   │   │   │   ├── CautionCardController.js.html
+│   │   │   │   ├── index.html
+│   │   │   │   ├── OrphanedCardController.js.html
+│   │   │   │   ├── PatientController.js.html
+│   │   │   │   ├── ReportController.js.html
+│   │   │   │   ├── RoleController.js.html
+│   │   │   │   └── UserController.js.html
+│   │   │   ├── database/
+│   │   │   │   ├── migrations/
+│   │   │   │   │   ├── 20240318000001-create-patients.js.html
+│   │   │   │   │   ├── 20240318000002-create-documents.js.html
+│   │   │   │   │   ├── 20240319000001-create-reports-table.js.html
+│   │   │   │   │   ├── 20240319000002-create-transfusion-requirements-table.js.html
+│   │   │   │   │   ├── 20240320_create_users_and_roles.js.html
+│   │   │   │   │   ├── 20240331-create-orphaned-caution-cards.js.html
+│   │   │   │   │   ├── 20240331-update-caution-cards.js.html
+│   │   │   │   │   ├── 20240402_create_events_table.js.html
+│   │   │   │   │   ├── 20240403000001-create-password-resets.js.html
+│   │   │   │   │   ├── 20250327102001-create-caution-cards.js.html
+│   │   │   │   │   ├── 20250327102002-create-orphaned-caution-cards.js.html
+│   │   │   │   │   └── index.html
+│   │   │   │   ├── models/
+│   │   │   │   │   ├── CautionCard.js.html
+│   │   │   │   │   ├── document.js.html
+│   │   │   │   │   ├── index.html
+│   │   │   │   │   ├── index.js.html
+│   │   │   │   │   ├── OcrResult.js.html
+│   │   │   │   │   ├── OrphanedCautionCard.js.html
+│   │   │   │   │   ├── PasswordReset.js.html
+│   │   │   │   │   ├── patient.js.html
+│   │   │   │   │   ├── Report.js.html
+│   │   │   │   │   ├── transfusionRequirement.js.html
+│   │   │   │   │   └── user.js.html
+│   │   │   │   ├── config.js.html
+│   │   │   │   ├── connection.js.html
+│   │   │   │   ├── db.js.html
+│   │   │   │   ├── fix-db.js.html
+│   │   │   │   ├── index.html
+│   │   │   │   ├── init.js.html
+│   │   │   │   ├── migrate.js.html
+│   │   │   │   ├── models.js.html
+│   │   │   │   └── storage.js.html
+│   │   │   ├── errors/
+│   │   │   │   ├── AppError.js.html
+│   │   │   │   ├── DatabaseError.js.html
+│   │   │   │   ├── ErrorTypes.js.html
+│   │   │   │   ├── index.html
+│   │   │   │   ├── index.js.html
+│   │   │   │   ├── NotFoundError.js.html
+│   │   │   │   └── ValidationError.js.html
+│   │   │   ├── events/
+│   │   │   │   ├── ClientSessionTracker.js.html
+│   │   │   │   ├── EventClassifier.js.html
+│   │   │   │   ├── HybridEventSystem.js.html
+│   │   │   │   ├── index.html
+│   │   │   │   ├── index.js.html
+│   │   │   │   └── PersistenceManager.js.html
+│   │   │   ├── middleware/
+│   │   │   │   ├── __tests__/
+│   │   │   │   │   ├── index.html
+│   │   │   │   │   ├── validation.test.js.html
+│   │   │   │   │   └── wsAuth.test.js.html
+│   │   │   │   ├── auth.js.html
+│   │   │   │   ├── dependencyInjection.js.html
+│   │   │   │   ├── error-handler.js.html
+│   │   │   │   ├── errorHandler.js.html
+│   │   │   │   ├── fileValidation.js.html
+│   │   │   │   ├── index.html
+│   │   │   │   ├── not-found.js.html
+│   │   │   │   ├── rateLimit.js.html
+│   │   │   │   ├── requestLogger.js.html
+│   │   │   │   ├── responseHandler.js.html
+│   │   │   │   ├── validateRequest.js.html
+│   │   │   │   ├── validation.js.html
+│   │   │   │   └── wsAuth.js.html
+│   │   │   ├── models/
+│   │   │   │   ├── index.html
+│   │   │   │   ├── PatientRecord.js.html
+│   │   │   │   └── Report.js.html
+│   │   │   ├── monitoring/
+│   │   │   │   ├── index.html
+│   │   │   │   ├── metrics.js.html
+│   │   │   │   └── MonitoringService.js.html
+│   │   │   ├── ocr/
+│   │   │   │   ├── index.html
+│   │   │   │   └── ocr_processor.js.html
+│   │   │   ├── repositories/
+│   │   │   │   ├── __tests__/
+│   │   │   │   │   ├── CautionCardRepository.test.js.html
+│   │   │   │   │   ├── DocumentRepository.test.js.html
+│   │   │   │   │   ├── index.html
+│   │   │   │   │   ├── OrphanedCautionCardRepository.test.js.html
+│   │   │   │   │   ├── PatientRepository.test.js.html
+│   │   │   │   │   └── UserRepository.test.js.html
+│   │   │   │   ├── BaseRepository.js.html
+│   │   │   │   ├── CautionCardRepository.js.html
+│   │   │   │   ├── DocumentRepository.js.html
+│   │   │   │   ├── index.html
+│   │   │   │   ├── OcrResultRepository.js.html
+│   │   │   │   ├── OrphanedCautionCardRepository.js.html
+│   │   │   │   ├── PatientRepository.js.html
+│   │   │   │   ├── ReportRepository.js.html
+│   │   │   │   └── UserRepository.js.html
+│   │   │   ├── routes/
+│   │   │   │   ├── __tests__/
+│   │   │   │   │   ├── caution-cards.test.js.html
+│   │   │   │   │   ├── cautionCards.test.js.html
+│   │   │   │   │   ├── index.html
+│   │   │   │   │   └── orphanedCards.test.js.html
+│   │   │   │   ├── auth.js.html
+│   │   │   │   ├── caution-cards.js.html
+│   │   │   │   ├── cautionCards.js.html
+│   │   │   │   ├── documents.js.html
+│   │   │   │   ├── index.html
+│   │   │   │   ├── orphanedCards.js.html
+│   │   │   │   ├── patients.js.html
+│   │   │   │   ├── reports.js.html
+│   │   │   │   ├── roles.js.html
+│   │   │   │   ├── transfusion.js.html
+│   │   │   │   ├── uploadRoutes.js.html
+│   │   │   │   └── users.js.html
+│   │   │   ├── services/
+│   │   │   │   ├── __tests__/
+│   │   │   │   │   ├── AuthService.test.js.html
+│   │   │   │   │   ├── CautionCardService.test.js.html
+│   │   │   │   │   ├── DocumentService.test.js.html
+│   │   │   │   │   ├── index.html
+│   │   │   │   │   ├── OcrService.test.js.html
+│   │   │   │   │   ├── OrphanedCardService.test.js.html
+│   │   │   │   │   ├── PatientService.test.js.html
+│   │   │   │   │   └── WebSocketService.test.js.html
+│   │   │   │   ├── AuthService.js.html
+│   │   │   │   ├── BaseService.js.html
+│   │   │   │   ├── CautionCardService.js.html
+│   │   │   │   ├── DocumentService.js.html
+│   │   │   │   ├── FileProcessingService.js.html
+│   │   │   │   ├── index.html
+│   │   │   │   ├── OcrService.js.html
+│   │   │   │   ├── OrphanedCardService.js.html
+│   │   │   │   ├── PatientService.js.html
+│   │   │   │   ├── reportParser.js.html
+│   │   │   │   ├── ReportService.js.html
+│   │   │   │   ├── reportStorageService.js.html
+│   │   │   │   ├── reportValidator.js.html
+│   │   │   │   └── WebSocketService.js.html
+│   │   │   ├── test/
+│   │   │   │   ├── index.html
+│   │   │   │   └── setup.js.html
+│   │   │   ├── tests/
+│   │   │   │   ├── database.test.js.html
+│   │   │   │   └── index.html
+│   │   │   ├── utils/
+│   │   │   │   ├── __tests__/
+│   │   │   │   │   ├── formatters.test.js.html
+│   │   │   │   │   └── index.html
+│   │   │   │   ├── validation/
+│   │   │   │   │   ├── __tests__/
+│   │   │   │   │   │   ├── BaseValidator.test.js.html
+│   │   │   │   │   │   ├── CautionCardValidator.test.js.html
+│   │   │   │   │   │   ├── index.html
+│   │   │   │   │   │   ├── PatientValidator.test.js.html
+│   │   │   │   │   │   ├── ReportValidator.test.js.html
+│   │   │   │   │   │   ├── RoleValidator.test.js.html
+│   │   │   │   │   │   └── UserValidator.test.js.html
+│   │   │   │   │   ├── BaseValidator.js.html
+│   │   │   │   │   ├── CautionCardValidator.js.html
+│   │   │   │   │   ├── index.html
+│   │   │   │   │   ├── index.js.html
+│   │   │   │   │   ├── PatientValidator.js.html
+│   │   │   │   │   ├── ReportValidator.js.html
+│   │   │   │   │   ├── RoleValidator.js.html
+│   │   │   │   │   └── UserValidator.js.html
+│   │   │   │   ├── ApiError.js.html
+│   │   │   │   ├── asyncHandler.js.html
+│   │   │   │   ├── authUtils.js.html
+│   │   │   │   ├── bloodTypeValidator.js.html
+│   │   │   │   ├── ErrorHandler.js.html
+│   │   │   │   ├── errors.js.html
+│   │   │   │   ├── formatters.js.html
+│   │   │   │   ├── httpErrorResponses.js.html
+│   │   │   │   ├── index.html
+│   │   │   │   ├── logger.js.html
+│   │   │   │   ├── reportParser.js.html
+│   │   │   │   ├── secureFileHandler.js.html
+│   │   │   │   └── virusScanner.js.html
+│   │   │   ├── websocket/
+│   │   │   │   ├── __tests__/
+│   │   │   │   │   ├── index.html
+│   │   │   │   │   └── testHelpers.ts.html
+│   │   │   │   ├── ConnectionManager.js.html
+│   │   │   │   ├── ErrorRecoveryService.js.html
+│   │   │   │   ├── EventStore.ts.html
+│   │   │   │   ├── handler.js.html
+│   │   │   │   ├── index.html
+│   │   │   │   ├── index.js.html
+│   │   │   │   ├── OcrProgressManager.js.html
+│   │   │   │   ├── WebSocketIntegration.js.html
+│   │   │   │   └── WebSocketServer.ts.html
+│   │   │   ├── app.js.html
+│   │   │   ├── check-database.js.html
+│   │   │   ├── debug-server.js.html
+│   │   │   ├── index.html
+│   │   │   ├── server.js.html
+│   │   │   └── sync-database.js.html
+│   │   ├── base.css
+│   │   ├── block-navigation.js
+│   │   ├── favicon.png
+│   │   ├── index.html
+│   │   ├── prettify.css
+│   │   ├── prettify.js
+│   │   ├── sort-arrow-sprite.png
+│   │   └── sorter.js
+│   ├── clover.xml
+│   ├── coverage-final.json
+│   └── lcov.info
+├── cursor-memory-bank/
+├── data/
+│   ├── logs/
+│   ├── uploads/
+│   ├── caution-cards.json
+│   ├── development.sqlite-shm
+│   └── development.sqlite-wal
+├── database/
+│   ├── models/
+│   │   ├── OcrResult.js
+│   │   └── Patient.js
+│   ├── .key
+│   ├── cleanup_reports.sql
+│   ├── db.js
+│   └── schema.sql
+├── debug_output/
+├── docs/
+│   ├── OCR_PIPELINE.md
+│   └── websocket-integration.md
+├── form_ocr/
+│   ├── __pycache__/
+│   ├── resources/
+│   │   ├── coordinates/
+│   │   │   └── caution_card_coords.json
+│   │   ├── masks/
+│   │   │   ├── alignment_mask.png
+│   │   │   └── manualmask.png
+│   │   └── templates/
+│   │       └── caution_card_template.png
+│   ├── __init__.py
+│   ├── analyze_phenotype_cell.py
+│   ├── image_processor.py
+│   ├── process_card.py
+│   └── trocr_handler.py
+├── instance/
+│   └── app.db
+├── logs/
+├── migrations/
+│   ├── versions/
+│   │   └── create_training_data_tables.py
+│   ├── 20250408125700_create_ocr_batch_jobs.js
+│   ├── alembic.ini
+│   ├── env.py
+│   ├── README
+│   └── script.py.mako
+├── node_modules/
+├── public/
+│   ├── index.html
+│   └── websocket-client.js
+├── python/
+│   ├── __pycache__/
+│   ├── ocr_processor.py
+│   ├── ocr_server.py
+│   └── requirements.txt
+├── routes/
+│   ├── __tests__/
+│   │   ├── ocr-endpoints.test.js
+│   │   └── ocr.test.js
+│   ├── index.js
+│   ├── ocr.js
+│   ├── patients.js
+│   ├── reports.js
+│   ├── training.js
+│   └── transfusion.js
+├── scripts/
+│   ├── create-bundle.js
+│   ├── download_model.py
+│   ├── download-model.js
+│   ├── generate_template.py
+│   ├── README.md
+│   ├── setup_python_env.sh
+│   ├── setup_test.py
+│   ├── setup-ocr.js
+│   ├── setup-venv.js
+│   ├── test_cuda.py
+│   ├── test_integration.sh
+│   ├── test_ocr_integration.js
+│   ├── verify_install.py
+│   └── verify-ocr.js
+├── services/
+│   └── ocrProcessor.js
+├── src/
+│   ├── config/
+│   │   ├── __tests__/
+│   │   │   └── envValidator.test.js
+│   │   ├── config.js
+│   │   ├── config.py
+│   │   ├── database.js
+│   │   ├── envValidator.js
+│   │   ├── test.config.js
+│   │   └── upload.config.js
+│   ├── controllers/
+│   │   ├── __tests__/
+│   │   │   ├── CautionCardController.test.js
+│   │   │   └── OrphanedCardController.test.js
+│   │   ├── CautionCardController.js
+│   │   ├── OrphanedCardController.js
+│   │   ├── PatientController.js
+│   │   ├── ReportController.js
+│   │   ├── RoleController.js
+│   │   └── UserController.js
+│   ├── database/
+│   │   ├── migrations/
+│   │   │   ├── 20240318000001-create-patients.js
+│   │   │   ├── 20240318000002-create-documents.js
+│   │   │   ├── 20240319000001-create-reports-table.js
+│   │   │   ├── 20240319000002-create-transfusion-requirements-table.js
+│   │   │   ├── 20240320_create_users_and_roles.js
+│   │   │   ├── 20240331-create-orphaned-caution-cards.js
+│   │   │   ├── 20240331-update-caution-cards.js
+│   │   │   ├── 20240402_create_events_table.js
+│   │   │   ├── 20240403000001-create-password-resets.js
+│   │   │   ├── 20250327102001-create-caution-cards.js
+│   │   │   └── 20250327102002-create-orphaned-caution-cards.js
+│   │   ├── models/
+│   │   │   ├── CautionCard.js
+│   │   │   ├── document.js
+│   │   │   ├── index.js
+│   │   │   ├── OcrResult.js
+│   │   │   ├── OrphanedCautionCard.js
+│   │   │   ├── PasswordReset.js
+│   │   │   ├── patient.js
+│   │   │   ├── Report.js
+│   │   │   ├── transfusionRequirement.js
+│   │   │   └── user.js
+│   │   ├── config.js
+│   │   ├── connection.js
+│   │   ├── db.js
+│   │   ├── fix-db.js
+│   │   ├── init.js
+│   │   ├── migrate.js
+│   │   ├── models.js
+│   │   ├── seed.js
+│   │   └── storage.js
+│   ├── docs/
+│   │   └── api.md
+│   ├── errors/
+│   │   ├── AppError.js
+│   │   ├── DatabaseError.js
+│   │   ├── ErrorTypes.js
+│   │   ├── index.js
+│   │   ├── NotFoundError.js
+│   │   └── ValidationError.js
+│   ├── events/
+│   │   ├── ClientSessionTracker.js
+│   │   ├── EventClassifier.js
+│   │   ├── HybridEventSystem.js
+│   │   ├── index.js
+│   │   └── PersistenceManager.js
+│   ├── middleware/
+│   │   ├── __tests__/
+│   │   │   ├── validation.test.js
+│   │   │   └── wsAuth.test.js
+│   │   ├── auth.js
+│   │   ├── dependencyInjection.js
+│   │   ├── error-handler.js
+│   │   ├── errorHandler.js
+│   │   ├── fileValidation.js
+│   │   ├── not-found.js
+│   │   ├── rateLimit.js
+│   │   ├── requestLogger.js
+│   │   ├── responseHandler.js
+│   │   ├── validateRequest.js
+│   │   ├── validation.js
+│   │   └── wsAuth.js
+│   ├── models/
+│   │   ├── PatientRecord.js
+│   │   ├── PatientSource.java
+│   │   └── Report.js
+│   ├── monitoring/
+│   │   ├── dashboards/
+│   │   │   └── caution-cards-dashboard.json
+│   │   ├── alert-rules.yml
+│   │   ├── metrics.js
+│   │   └── MonitoringService.js
+│   ├── ocr/
+│   │   └── ocr_processor.js
+│   ├── repositories/
+│   │   ├── __tests__/
+│   │   │   ├── CautionCardRepository.test.js
+│   │   │   ├── DocumentRepository.test.js
+│   │   │   ├── OrphanedCautionCardRepository.test.js
+│   │   │   ├── PatientRepository.test.js
+│   │   │   └── UserRepository.test.js
+│   │   ├── BaseRepository.js
+│   │   ├── CautionCardRepository.js
+│   │   ├── DocumentRepository.js
+│   │   ├── OcrResultRepository.js
+│   │   ├── OrphanedCautionCardRepository.js
+│   │   ├── PatientRepository.js
+│   │   ├── ReportRepository.js
+│   │   └── UserRepository.js
+│   ├── routes/
+│   │   ├── __tests__/
+│   │   │   ├── caution-cards.test.js
+│   │   │   ├── cautionCards.test.js
+│   │   │   └── orphanedCards.test.js
+│   │   ├── auth.js
+│   │   ├── caution-cards.js
+│   │   ├── cautionCards.js
+│   │   ├── documents.js
+│   │   ├── orphanedCards.js
+│   │   ├── patients.js
+│   │   ├── reports.js
+│   │   ├── roles.js
+│   │   ├── transfusion.js
+│   │   ├── uploadRoutes.js
+│   │   └── users.js
+│   ├── scripts/
+│   │   └── init_db.py
+│   ├── services/
+│   │   ├── __tests__/
+│   │   │   ├── AuthService.test.js
+│   │   │   ├── CautionCardService.test.js
+│   │   │   ├── DocumentService.test.js
+│   │   │   ├── OcrService.test.js
+│   │   │   ├── OrphanedCardService.test.js
+│   │   │   ├── PatientService.test.js
+│   │   │   └── WebSocketService.test.js
+│   │   ├── AuthService.js
+│   │   ├── BaseService.js
+│   │   ├── CautionCardService.js
+│   │   ├── DocumentService.js
+│   │   ├── FileProcessingService.js
+│   │   ├── OcrService.js
+│   │   ├── OrphanedCardService.js
+│   │   ├── PatientService.js
+│   │   ├── reportParser.js
+│   │   ├── ReportService.js
+│   │   ├── reportStorageService.js
+│   │   ├── reportValidator.js
+│   │   └── WebSocketService.js
+│   ├── test/
+│   │   └── setup.js
+│   ├── tests/
+│   │   ├── integration/
+│   │   │   ├── fixtures/
+│   │   │   ├── core-flow.test.js
+│   │   │   └── user-management.test.js
+│   │   ├── middleware/
+│   │   │   └── validation.test.js
+│   │   ├── repositories/
+│   │   │   ├── BaseRepository.test.js
+│   │   │   ├── CautionCardRepository.test.js
+│   │   │   └── ReportRepository.test.js
+│   │   ├── services/
+│   │   │   ├── BaseService.test.js
+│   │   │   ├── CautionCardService.test.js
+│   │   │   └── ReportService.test.js
+│   │   ├── database.test.js
+│   │   ├── report-storage.test.js
+│   │   ├── report-upload.test.js
+│   │   ├── reportStorage.test.js
+│   │   └── setup.js
+│   ├── uploads/
+│   ├── utils/
+│   │   ├── __tests__/
+│   │   │   └── formatters.test.js
+│   │   ├── validation/
+│   │   │   ├── __tests__/
+│   │   │   │   ├── BaseValidator.test.js
+│   │   │   │   ├── CautionCardValidator.test.js
+│   │   │   │   ├── PatientValidator.test.js
+│   │   │   │   ├── ReportValidator.test.js
+│   │   │   │   ├── RoleValidator.test.js
+│   │   │   │   └── UserValidator.test.js
+│   │   │   ├── BaseValidator.js
+│   │   │   ├── CautionCardValidator.js
+│   │   │   ├── index.js
+│   │   │   ├── PatientValidator.js
+│   │   │   ├── ReportValidator.js
+│   │   │   ├── RoleValidator.js
+│   │   │   └── UserValidator.js
+│   │   ├── ApiError.js
+│   │   ├── asyncHandler.js
+│   │   ├── authUtils.js
+│   │   ├── bloodTypeValidator.js
+│   │   ├── ErrorHandler.js
+│   │   ├── errors.js
+│   │   ├── formatters.js
+│   │   ├── httpErrorResponses.js
+│   │   ├── logger.js
+│   │   ├── reportParser.js
+│   │   ├── secureFileHandler.js
+│   │   └── virusScanner.js
+│   ├── websocket/
+│   │   ├── __tests__/
+│   │   │   ├── EventStore.test.ts
+│   │   │   ├── testHelpers.ts
+│   │   │   ├── websocket-integration.test.js
+│   │   │   └── WebSocketServer.test.ts
+│   │   ├── ConnectionManager.js
+│   │   ├── ErrorRecoveryService.js
+│   │   ├── EventStore.ts
+│   │   ├── handler.js
+│   │   ├── index.js
+│   │   ├── OcrProgressManager.js
+│   │   ├── WebSocketIntegration.js
+│   │   └── WebSocketServer.ts
+│   ├── app.js
+│   ├── check-database.js
+│   ├── debug-server.js
+│   ├── server.js
+│   ├── server.js.new
+│   └── sync-database.js
+├── target/
+│   ├── classes/
+│   │   ├── com/
+│   │   │   └── patientinfo/
+│   │   │       ├── config/
+│   │   │       │   ├── AppConfig.class
+│   │   │       │   └── SecurityConfig.class
+│   │   │       ├── controllers/
+│   │   │       │   ├── PatientController.class
+│   │   │       │   └── ReportController.class
+│   │   │       ├── models/
+│   │   │       │   ├── FileAttachment.class
+│   │   │       │   ├── Patient.class
+│   │   │       │   ├── PatientHistory.class
+│   │   │       │   └── ReviewQueue.class
+│   │   │       ├── repositories/
+│   │   │       │   ├── PatientHistoryRepository.class
+│   │   │       │   └── PatientRepository.class
+│   │   │       ├── Application.class
+│   │   │       └── Application$1.class
+│   │   └── application.properties
+│   ├── generated-sources/
+│   │   └── annotations/
+│   ├── maven-archiver/
+│   │   └── pom.properties
+│   ├── maven-status/
+│   │   └── maven-compiler-plugin/
+│   │       └── compile/
+│   │           └── default-compile/
+│   │               ├── createdFiles.lst
+│   │               └── inputFiles.lst
+│   ├── patient-info-app-0.0.1-SNAPSHOT.jar
+│   └── patient-info-app-0.0.1-SNAPSHOT.jar.original
+├── test_data/
+│   └── sample_caution_card.png
+├── tests/
+│   ├── integration/
+│   │   └── training-data.test.js
+│   ├── performance/
+│   │   └── training-data.load.test.js
+│   ├── routes/
+│   ├── setup.js
+│   ├── test_auth.py
+│   ├── test_models.py
+│   ├── test_ocr_processor.py
+│   ├── test_patient.py
+│   ├── test_patients.py
+│   ├── test_report_parser.py
+│   ├── test_transfusion.py
+│   └── test-utils.js
+├── trocr_tool/
+│   ├── images/
+│   │   ├── Doc0010.png
+│   │   ├── Doc0011.png
+│   │   ├── Doc0012.png
+│   │   ├── Doc0013.png
+│   │   ├── Doc0014.png
+│   │   ├── Doc0016.png
+│   │   ├── Doc0017.png
+│   │   ├── Doc0018.png
+│   │   ├── Doc0019.png
+│   │   ├── Doc0020.png
+│   │   └── Doc0021.png
+│   ├── venv/
+│   ├── imagepaths.json
+│   ├── requirements.txt
+│   ├── setup_and_run.bat
+│   ├── trocr_config.json
+│   └── trocr_tool.py
+├── trocr-large-handwritten/
+│   ├── .git/
+│   ├── .gitattributes
+│   ├── config.json
+│   ├── generation_config.json
+│   ├── merges.txt
+│   ├── preprocessor_config.json
+│   ├── pytorch_model.bin
+│   ├── README.md
+│   ├── special_tokens_map.json
+│   ├── tokenizer_config.json
+│   └── vocab.json
+├── uploads/
+├── venv/
+├── workers/
+│   └── ocrBatchWorker.js
+├── .babelrc
+├── .dockerignore
+├── .env
+├── .env.development
+├── .env.example
+├── .env.portable
+├── .env.production
+├── .env.staging
+├── .env.venv
+├── .gitignore
+├── 4.66.0
+├── API_DOCUMENTATION.md
+├── backend_structure_2025-04-09_10-13.txt
+├── database.sqlite
+├── debug_logs.txt
+├── development.sqlite-shm
+├── development.sqlite-wal
+├── Doc0006.tif
+├── Doc0007.tif
+├── Doc0008.tif
+├── Doc0009.tif
+├── Doc0010.png
+├── Doc0011.png
+├── Doc0012.png
+├── Doc0013.png
+├── Doc0014.png
+├── Doc0016.png
+├── Doc0017.png
+├── Doc0018.png
+├── Doc0019.png
+├── Doc0020.png
+├── Doc0021.png
+├── EXAMPLEREPORT.txt
+├── implementation-plan.md
+├── jest.config.js
+├── package-lock.json
+├── package.json
+├── README.md
+├── requirements.txt
+├── SECURITY.md
+├── server.js
+├── start.sh
+└── tasks.md
