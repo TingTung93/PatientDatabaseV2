@@ -17,31 +17,35 @@ const createMockPatient = (overrides: Partial<Patient> = {}): Patient => {
     lastName: 'Doe',
     dateOfBirth: '1990-01-01',
     gender: 'M',
-    contactNumber: '555-1234',
-    email: 'john.doe@email.com',
+    contactNumber: '555-0123',
+    email: 'john.doe@example.com'
   };
+
+  const baseBloodProfile: BloodProfile = {
+    abo: 'A',
+    rh: '+',
+    phenotype: {
+      rh: {},
+      kell: {},
+      duffy: {},
+      kidd: {},
+      mns: {}
+    },
+    antibodies: []
+  };
+
   const baseMedicalHistory: MedicalHistory = {
     allergies: [],
     conditions: [],
     medications: [],
-    procedures: [],
     surgeries: [],
-  };
-  const baseBloodProfile: BloodProfile = {
-    abo: 'A',
-    rh: '+',
-    antibodies: [],
-    phenotype: {
-      rh: { D: true, C: true, E: false, c: true, e: true },
-      kell: { K: false, k: true },
-      duffy: { Fya: true, Fyb: true },
-      kidd: { Jka: true, Jkb: true },
-      mns: { M: true, N: true, S: true, s: true },
-    },
+    procedures: []
   };
 
   return {
     id: '1',
+    firstName: overrides.demographics?.firstName || baseDemographics.firstName,
+    lastName: overrides.demographics?.lastName || baseDemographics.lastName,
     identification: {
       id: '1',
       mrn: 'MRN123',

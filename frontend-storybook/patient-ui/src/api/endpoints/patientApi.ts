@@ -1,30 +1,40 @@
 import { apiClient } from '../apiClient';
-import { Patient } from '../../types/patient';
+import {
+  Patient,
+  CreatePatientRequest,
+  UpdatePatientRequest,
+} from '../../types/patient';
 
 const API_BASE = '/api/v1';
 
 export const patientApi = {
-  getAllPatients: async () => {
+  getAllPatients: async (): Promise<Patient[]> => {
     const response = await apiClient.get<Patient[]>(`${API_BASE}/patients`);
     return response.data;
   },
 
-  getPatientById: async (id: string) => {
+  getPatientById: async (id: string): Promise<Patient> => {
     const response = await apiClient.get<Patient>(`${API_BASE}/patients/${id}`);
     return response.data;
   },
 
-  createPatient: async (patient: Omit<Patient, 'id' | 'createdAt' | 'updatedAt'>) => {
-    const response = await apiClient.post<Patient>(`${API_BASE}/patients`, patient);
+  createPatient: async (patientData: CreatePatientRequest): Promise<Patient> => {
+    const response = await apiClient.post<Patient>(`${API_BASE}/patients`, patientData);
     return response.data;
   },
 
-  updatePatient: async (id: string, patient: Partial<Omit<Patient, 'id' | 'createdAt' | 'updatedAt'>>) => {
-    const response = await apiClient.put<Patient>(`${API_BASE}/patients/${id}`, patient);
+  updatePatient: async (
+    id: string,
+    patientData: UpdatePatientRequest
+  ): Promise<Patient> => {
+    const response = await apiClient.put<Patient>(
+      `${API_BASE}/patients/${id}`,
+      patientData
+    );
     return response.data;
   },
 
-  deletePatient: async (id: string) => {
+  deletePatient: async (id: string): Promise<void> => {
     await apiClient.delete(`${API_BASE}/patients/${id}`);
   },
 }; 

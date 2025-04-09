@@ -58,14 +58,14 @@ export const ReportUploadPage: React.FC = () => {
       const formData = new FormData();
       formData.append('file', selectedFile);
       formData.append('type', reportType);
-      if (patientId) {
-        formData.append('patientId', patientId);
+      if (patientId.trim()) {
+        formData.append('patientId', patientId.trim());
       }
 
       const result = await fileUploadService.uploadFile(
         selectedFile,
         FileTypeCategory.Report,
-        patientId || 'unknown',
+        patientId.trim() || null,
         (progress: UploadProgress) => {
           setUploadProgress(progress);
         }
@@ -73,7 +73,7 @@ export const ReportUploadPage: React.FC = () => {
 
       if (result.success) {
         queryClient.invalidateQueries({ queryKey: ['reports'] });
-        if (patientId) {
+        if (patientId.trim()) {
           queryClient.invalidateQueries({ queryKey: ['patient-reports', patientId] });
         }
         navigate('/reports');
@@ -103,11 +103,11 @@ export const ReportUploadPage: React.FC = () => {
                 onFileSelect={handleFileSelect}
                 onValidationError={handleFileValidationError}
                 validateFile={validateReportFile}
-                accept={fileValidationService.getAcceptString(FileTypeCategory.Report)}
+                accept=".txt,.pdf,.docx,.doc,.rtf,.odt,.html,.xml,.csv,.json,.yaml,.md"
                 selectedFile={selectedFile}
                 onReset={handleFileReset}
                 disabled={isUploading}
-                instructions={`Drag & drop PDF or DOCX file here (Max ${fileValidationService.getMaxFileSizeMB()}MB), or click to select`}
+                instructions={`Drag & drop any text file here (Max ${fileValidationService.getMaxFileSizeMB()}MB), or click to select`}
               />
             </Box>
 

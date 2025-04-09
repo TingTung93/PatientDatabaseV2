@@ -46,6 +46,8 @@ export const ExistingPatient: Story = {
     patient: {
       // Add missing required fields
       id: 'existing-123',
+      firstName: 'John',
+      lastName: 'Doe',
       identification: { id: 'existing-123', mrn: 'MRN67890' },
       demographics: {
         firstName: 'John',

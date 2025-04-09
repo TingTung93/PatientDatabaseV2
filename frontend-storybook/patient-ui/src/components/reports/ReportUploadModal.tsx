@@ -3,8 +3,6 @@ import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import { Modal } from '../common/Modal';
 import { useQueryClient } from '@tanstack/react-query';
-// Assuming Patient type exists
-import { Patient } from '../../types/patient';
 import { AuthContext } from '../../context/AuthContext';
 // Import new services and components
 import { fileUploadService, UploadProgress, UploadResult } from '../../services/FileUploadService';
@@ -83,7 +81,7 @@ const ReportUploadModal: React.FC<ReportUploadModalProps> = ({
         values.file,
         FileTypeCategory.Report,
         // Use patientId from formik values, ensure it's a string if present
-        values.patientId ? String(values.patientId) : 'unknown', // Or handle appropriately if linking is mandatory
+        values.patientId ? String(values.patientId) : null,
         (progress: UploadProgress) => {
           setUploadProgress(progress);
         }

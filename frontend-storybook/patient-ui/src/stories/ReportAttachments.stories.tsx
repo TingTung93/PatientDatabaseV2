@@ -1,7 +1,8 @@
+import React from 'react';
 import type { Meta, StoryObj } from '@storybook/react';
-import { message } from 'antd';
+import { Snackbar, Alert } from '@mui/material';
 import { ReportAttachments } from '../components/reports/ReportAttachments';
-import { ReportAttachment } from '../types/report'; // Correct import path
+import { ReportAttachment } from '../types/report';
 
 const meta = {
   title: 'Components/ReportAttachments',
@@ -15,22 +16,21 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-// Update mock data to match ReportAttachment from report.ts
 const mockAttachments: ReportAttachment[] = [
   {
-    id: 'att-1', // Use string or number
-    name: 'blood-test-results.pdf', // Use 'name'
+    id: 'att-1',
+    name: 'blood-test-results.pdf',
     type: 'application/pdf',
-    size: 1024576, // 1MB
-    uploaded_at: '2024-03-15T10:30:00Z', // Use 'uploaded_at'
+    size: 1024576,
+    uploaded_at: '2024-03-15T10:30:00Z',
     url: 'https://example.com/files/blood-test-results.pdf',
   },
   {
-    id: 'att-2', // Use string or number
-    name: 'x-ray-scan.jpg', // Use 'name'
+    id: 'att-2',
+    name: 'x-ray-scan.jpg',
     type: 'image/jpeg',
-    size: 2048576, // 2MB
-    uploaded_at: '2024-03-15T11:15:00Z', // Use 'uploaded_at'
+    size: 2048576,
+    uploaded_at: '2024-03-15T11:15:00Z',
     url: 'https://example.com/files/x-ray-scan.jpg',
   },
 ];
@@ -39,7 +39,7 @@ export const Default: Story = {
   args: {
     attachments: mockAttachments,
     onDownload: attachment => {
-      console.log('Downloading:', attachment.name); // Use 'name'
+      console.log('Downloading:', attachment.name);
     },
   },
 };
@@ -48,30 +48,78 @@ export const Empty: Story = {
   args: {
     attachments: [],
     onDownload: attachment => {
-      console.log('Downloading:', attachment.name); // Use 'name'
+      console.log('Downloading:', attachment.name);
     },
   },
 };
 
 export const WithDownloadHandler: Story = {
-  args: {
-    attachments: mockAttachments,
-    onDownload: attachment => {
-      message.info(`Downloading ${attachment.name}...`); // Use 'name'
+  render: (args) => {
+    const [open, setOpen] = React.useState(false);
+    const [message, setMessage] = React.useState('');
+    const [severity, setSeverity] = React.useState<'success' | 'info'>('info');
+
+    const handleDownload = (attachment: ReportAttachment) => {
+      setMessage(`Downloading ${attachment.name}...`);
+      setSeverity('info');
+      setOpen(true);
+      
       // Simulate download delay
       setTimeout(() => {
-        message.success(`${attachment.name} downloaded successfully`); // Use 'name'
+        setMessage(`${attachment.name} downloaded successfully`);
+        setSeverity('success');
       }, 1000);
-    },
+    };
+
+    return (
+      <>
+        <ReportAttachments {...args} onDownload={handleDownload} />
+        <Snackbar
+          open={open}
+          autoHideDuration={3000}
+          onClose={() => setOpen(false)}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        >
+          <Alert severity={severity} onClose={() => setOpen(false)}>
+            {message}
+          </Alert>
+        </Snackbar>
+      </>
+    );
+  },
+  args: {
+    attachments: mockAttachments,
   },
 };
 
 export const WithDownloadError: Story = {
+  render: (args) => {
+    const [open, setOpen] = React.useState(false);
+    const [message, setMessage] = React.useState('');
+
+    const handleDownload = (attachment: ReportAttachment) => {
+      setMessage(`Failed to download ${attachment.name}`);
+      setOpen(true);
+    };
+
+    return (
+      <>
+        <ReportAttachments {...args} onDownload={handleDownload} />
+        <Snackbar
+          open={open}
+          autoHideDuration={3000}
+          onClose={() => setOpen(false)}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        >
+          <Alert severity="error" onClose={() => setOpen(false)}>
+            {message}
+          </Alert>
+        </Snackbar>
+      </>
+    );
+  },
   args: {
     attachments: mockAttachments,
-    onDownload: attachment => {
-      message.error(`Failed to download ${attachment.name}`); // Use 'name'
-    },
   },
 };
 

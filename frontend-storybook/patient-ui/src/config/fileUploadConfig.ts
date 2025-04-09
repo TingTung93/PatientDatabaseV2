@@ -16,7 +16,10 @@ export const fileUploadConfig: FileUploadConfig = {
   allowedReportTypes: [
     'application/pdf',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  ], // PDF, DOCX
+    'text/plain', // TXT
+    'application/msword', // DOC
+    'application/rtf', // RTF
+  ], // PDF, DOCX, TXT, DOC, RTF
   allowedCautionCardTypes: ['image/png', 'image/jpeg'], // PNG, JPG/JPEG
   maxFileSizeMB: MAX_FILE_SIZE_MB,
   maxFileSizeBytes: MAX_FILE_SIZE_MB * 1024 * 1024,

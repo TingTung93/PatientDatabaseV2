@@ -36,6 +36,8 @@ const defaultPhenotype: BloodPhenotype = {
 // Mock patient data
 const mockPatient: Patient = {
   id: 'story-123',
+  firstName: 'John',
+  lastName: 'Doe',
   identification: {
     id: '123', // This seems like a separate identifier within identification
     mrn: 'MRN123',
@@ -95,7 +97,7 @@ export const EmptyWithCreate: Story = {
       // Construct the new patient object carefully to avoid duplicate ID issues
       const newPatientBase: Omit<
         Patient,
-        'id' | 'identification' | 'createdAt' | 'updatedAt' | 'createdBy' | 'updatedBy'
+        'id' | 'identification' | 'createdAt' | 'updatedAt' | 'createdBy' | 'updatedBy' | 'firstName' | 'lastName'
       > = {
         demographics: patientData.demographics,
         bloodProfile: patientData.bloodProfile || mockPatient.bloodProfile, // Use provided or default
@@ -110,7 +112,9 @@ export const EmptyWithCreate: Story = {
         message: 'Patient created successfully',
         patient: {
           ...newPatientBase, // Spread the core data first
-          id: `new-${Date.now()}`, // Assign the new ID
+          id: `new-${Date.now()}`,
+          firstName: patientData.demographics.firstName,
+          lastName: patientData.demographics.lastName,
           identification: {
             // Provide mock identification
             id: `ident-${Date.now()}`,
@@ -146,6 +150,8 @@ export const ViewingPatient: Story = {
         patient: {
           ...mockPatient, // Start with original mock
           ...patientData, // Apply updates
+          firstName: patientData.demographics?.firstName ?? mockPatient.demographics.firstName,
+          lastName: patientData.demographics?.lastName ?? mockPatient.demographics.lastName,
           id: patientId, // Ensure ID matches
           updatedAt: new Date().toISOString(),
           updatedBy: 'StorybookUser',
@@ -176,6 +182,8 @@ export const EditingPatient: Story = {
         patient: {
           ...mockPatient,
           ...patientData,
+          firstName: patientData.demographics?.firstName ?? mockPatient.demographics.firstName,
+          lastName: patientData.demographics?.lastName ?? mockPatient.demographics.lastName,
           id: patientId,
           updatedAt: new Date().toISOString(),
           updatedBy: 'StorybookUser',
@@ -220,6 +228,8 @@ export const ComplexPatient: Story = {
   args: {
     patient: {
       ...mockPatient,
+      firstName: 'John',
+      lastName: 'Doe',
       bloodProfile: {
         ...mockPatient.bloodProfile,
         antibodies: ['anti-K', 'anti-E', 'anti-Fya', 'anti-Jka'],
@@ -248,7 +258,15 @@ export const ComplexPatient: Story = {
       return {
         success: true,
         message: 'Updated',
-        patient: { ...mockPatient, ...patientData, id: patientId },
+        patient: {
+          ...mockPatient,
+          ...patientData,
+          firstName: patientData.demographics?.firstName ?? mockPatient.demographics.firstName,
+          lastName: patientData.demographics?.lastName ?? mockPatient.demographics.lastName,
+          id: patientId,
+          updatedAt: new Date().toISOString(),
+          updatedBy: 'StorybookUser',
+        },
       };
     },
     onDelete: async (patientId: string) => {

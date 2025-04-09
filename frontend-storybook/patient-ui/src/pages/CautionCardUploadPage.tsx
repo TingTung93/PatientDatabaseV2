@@ -1,8 +1,8 @@
 import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { Typography, Paper, Container, Box, List, ListItem, ListItemText, IconButton, LinearProgress, Autocomplete, TextField, CircularProgress } from '@mui/material';
-import { Delete as DeleteIcon, CheckCircle as CheckCircleIcon, Error as ErrorIcon, Refresh as RefreshIcon } from '@mui/icons-material';
+import { Typography, Paper, Container, Box, List, ListItem, ListItemText, IconButton, LinearProgress, Autocomplete, TextField, CircularProgress, InputAdornment } from '@mui/material';
+import { Delete as DeleteIcon, CheckCircle as CheckCircleIcon, Error as ErrorIcon, Search as SearchIcon, Refresh as RefreshIcon } from '@mui/icons-material';
 import { FileUploadUI } from '../components/common/FileUploadUI';
 import { fileValidationService, FileTypeCategory } from '../services/FileValidationService';
 import { fileUploadService, UploadProgress } from '../services/FileUploadService';
@@ -15,7 +15,7 @@ interface UploadItem {
   status: 'pending' | 'uploading' | 'success' | 'error';
   error?: string;
   retryCount?: number;
-  preview?: string;
+  preview: string | undefined;
 }
 
 interface PatientOption {
@@ -40,11 +40,13 @@ export const CautionCardUploadPage: React.FC = () => {
   });
 
   // Transform patients into autocomplete options
-  const patientOptions: PatientOption[] = patients?.map(patient => ({
-    id: patient.id,
-    label: `${patient.lastName}, ${patient.firstName} (${patient.medicalRecordNumber || 'No MRN'})`,
-    patient,
-  })) || [];
+  const patientOptions: PatientOption[] = React.useMemo((): PatientOption[] => {
+    return patients?.map(patient => ({
+      id: patient.id,
+      label: `${patient.lastName}, ${patient.firstName} (${patient.medicalRecordNumber || 'No MRN'})`,
+      patient,
+    })) || [];
+  }, [patients]);
 
   // Cleanup previews on unmount
   React.useEffect(() => {
@@ -56,9 +58,9 @@ export const CautionCardUploadPage: React.FC = () => {
         }
       });
     };
-  }, []);
+  }, [uploadItems]);
 
-  const handleFileSelect = useCallback((file: File) => {
+  const handleFileSelect = useCallback((file: File): void => {
     setUploadItems(prev => {
       // Check if file is already in the list
       if (prev.some(item => item.file.name === file.name)) {
@@ -68,21 +70,23 @@ export const CautionCardUploadPage: React.FC = () => {
       // Create preview URL for image files
       const preview = file.type.startsWith('image/') ? URL.createObjectURL(file) : undefined;
 
-      return [...prev, {
+      const newItem: UploadItem = {
         file,
         progress: 0,
         status: 'pending',
         preview
-      }];
+      };
+
+      return [...prev, newItem];
     });
     setGlobalError(null);
   }, []);
 
-  const handleFileValidationError = useCallback((errorMsg: string) => {
+  const handleFileValidationError = useCallback((errorMsg: string): void => {
     setGlobalError(errorMsg);
   }, []);
 
-  const handleRemoveFile = (fileName: string) => {
+  const handleRemoveFile = (fileName: string): void => {
     setUploadItems(prev => {
       const item = prev.find(item => item.file.name === fileName);
       if (item?.preview) {
@@ -92,11 +96,15 @@ export const CautionCardUploadPage: React.FC = () => {
     });
   };
 
-  const validateCautionCardFile = useCallback((file: File) => {
-    return fileValidationService.validateFile(file, FileTypeCategory.CautionCard);
+  const validateCautionCardFile = useCallback((file: File): { message: string } | null => {
+    const result = fileValidationService.validateFile(file, FileTypeCategory.CautionCard);
+    if (typeof result === 'string') {
+      return { message: result };
+    }
+    return null;
   }, []);
 
-  const handleRetry = async (fileName: string) => {
+  const handleRetry = async (fileName: string): Promise<void> => {
     const item = uploadItems.find(item => item.file.name === fileName);
     if (!item) return;
 
@@ -151,7 +159,7 @@ export const CautionCardUploadPage: React.FC = () => {
     status: UploadItem['status'],
     error?: string,
     retryCount?: number
-  ) => {
+  ): void => {
     setUploadItems(prev =>
       prev.map(item =>
         item.file.name === fileName
@@ -167,7 +175,7 @@ export const CautionCardUploadPage: React.FC = () => {
     );
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
     if (!selectedPatient) {
       setGlobalError('Please select a patient');
@@ -231,7 +239,7 @@ export const CautionCardUploadPage: React.FC = () => {
     }
   };
 
-  const getStatusColor = (status: UploadItem['status']) => {
+  const getStatusColor = (status: UploadItem['status']): string => {
     switch (status) {
       case 'success': return 'success.main';
       case 'error': return 'error.main';
@@ -240,12 +248,12 @@ export const CautionCardUploadPage: React.FC = () => {
     }
   };
 
-  const handlePatientChange = (event: React.SyntheticEvent, value: PatientOption | null) => {
+  const handlePatientChange = (event: React.SyntheticEvent, value: PatientOption | null): void => {
     setSelectedPatient(value);
     setPatientId(value?.id || '');
   };
 
-  const handlePatientInputChange = (event: React.SyntheticEvent, value: string) => {
+  const handlePatientInputChange = (event: React.SyntheticEvent, value: string): void => {
     setPatientSearchQuery(value);
   };
 
@@ -284,12 +292,20 @@ export const CautionCardUploadPage: React.FC = () => {
                 disabled={isUploading}
                 renderInput={(params) => (
                   <TextField
-                    {...params}
+                    inputRef={params.InputProps.ref}
+                    inputProps={params.inputProps}
                     placeholder="Search by name or MRN"
                     variant="outlined"
                     fullWidth
+                    size="medium"
+                    label="Patient Search"
                     InputProps={{
-                      ...params.InputProps,
+                      className: 'patient-search-input',
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <SearchIcon />
+                        </InputAdornment>
+                      ),
                       endAdornment: (
                         <>
                           {isSearching ? <CircularProgress color="inherit" size={20} /> : null}
@@ -297,6 +313,8 @@ export const CautionCardUploadPage: React.FC = () => {
                         </>
                       ),
                     }}
+                    disabled={params.disabled || isUploading}
+                    id={params.id}
                   />
                 )}
                 renderOption={(props, option) => (

@@ -25,6 +25,8 @@ const mockMetadata = {
 // Base patient data with all phenotype markers
 const basePatient: Patient = {
   id: 'patient-123', // Root ID
+  firstName: 'John', // Added: Duplicate from demographics [TS2739 fix]
+  lastName: 'Doe',   // Added: Duplicate from demographics [TS2739 fix]
   identification: {
     id: '1', // This might be a different ID concept, keeping as is
     mrn: 'MRN001',

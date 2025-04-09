@@ -38,36 +38,39 @@ export class FileUploadService {
    *
    * @param {File} file - The file to upload.
    * @param {FileTypeCategory} category - The category of the file (Report or CautionCard).
-   * @param {string} patientId - The ID of the patient associated with the file.
+   * @param {string | null} patientId - The ID of the patient associated with the file.
    * @param {(progress: UploadProgress) => void} [onProgress] - Optional callback for upload progress updates.
    * @returns {Promise<UploadResult>} A promise resolving with the upload result.
    */
   public async uploadFile(
     file: File,
     category: FileTypeCategory,
-    patientId: string,
+    patientId: string | null,
     onProgress?: (progress: UploadProgress) => void
   ): Promise<UploadResult> {
     // Determine the relative endpoint path based on config structure
-    // Assuming config structure remains similar for path generation
     const endpointPath =
       category === FileTypeCategory.Report
-        ? `/api/v1/patients/${patientId}/reports` // Use relative path
-        : `/patients/${patientId}/caution-cards`; // Use relative path (removed /api/v1 prefix)
+        ? patientId ? `patients/${patientId}/reports` : 'reports'
+        : patientId ? `patients/${patientId}/caution-cards` : 'caution-cards';
 
     const formData = new FormData();
-    formData.append('file', file); // Assuming the backend expects the file under the key 'file'
+    formData.append('file', file); // Use 'file' as the field name to match backend expectation
+    if (patientId) {
+      formData.append('patient_id', patientId);
+    }
+    // Add report type for reports
+    if (category === FileTypeCategory.Report) {
+      formData.append('type', file.type); // Use the file's MIME type as the report type
+    }
 
     try {
       const response = await apiClient.post(
-        endpointPath, // Use the relative path
-        formData, // Send FormData as the body
+        endpointPath,
+        formData,
         {
-          // Axios config for upload progress and content type
           headers: {
-            // Let Axios handle Content-Type for FormData automatically
-            // It will set it to 'multipart/form-data' with the correct boundary
-            // 'Content-Type': 'multipart/form-data', // Remove this line
+            'Content-Type': 'multipart/form-data',
           },
           onUploadProgress: (progressEvent: AxiosProgressEvent) => {
             if (onProgress && progressEvent.total) {
@@ -78,7 +81,6 @@ export class FileUploadService {
                 percent: percent,
               });
             } else if (onProgress) {
-              // Handle cases where total might not be available initially
               onProgress({ loaded: progressEvent.loaded, total: 0, percent: 0 });
             }
           },
@@ -93,17 +95,17 @@ export class FileUploadService {
         message: 'File uploaded successfully.',
         fileUrl: response.data?.fileUrl, // Access data from Axios response
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Error handling is largely managed by the apiClient interceptor,
       // but we can still catch specific errors here if needed or log them.
       console.error('Error during file upload via apiClient:', error);
 
       // Extract a meaningful message if possible, otherwise use a generic one.
       // The interceptor might have already logged details or redirected.
-      const message =
-        error?.response?.data?.message ||
-        error?.message ||
-        'An unknown error occurred during upload.';
+      const message = error instanceof Error 
+        ? error.message 
+        : (error as { response?: { data?: { message?: string } } })?.response?.data?.message 
+        || 'An unknown error occurred during upload.';
 
       // Reset progress on error
       if (onProgress) {

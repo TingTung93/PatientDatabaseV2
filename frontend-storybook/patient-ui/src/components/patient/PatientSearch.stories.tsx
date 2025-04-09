@@ -27,6 +27,8 @@ const mockPatients: Patient[] = [
   // Add Patient type
   {
     id: '1', // Add top-level id
+    firstName: 'John', // Added: Duplicate from demographics [TS2739 fix]
+    lastName: 'Doe',   // Added: Duplicate from demographics [TS2739 fix]
     identification: { id: '1', mrn: 'MRN001' },
     demographics: {
       firstName: 'John',
@@ -59,6 +61,8 @@ const mockPatients: Patient[] = [
   },
   {
     id: '2', // Add top-level id
+    firstName: 'Jane', // Added: Duplicate from demographics [TS2739 fix]
+    lastName: 'Smith', // Added: Duplicate from demographics [TS2739 fix]
     identification: { id: '2', mrn: 'MRN002' },
     demographics: {
       firstName: 'Jane',
