@@ -11,7 +11,7 @@ interface CautionCardUploadResult {
 }
 
 interface CautionCardUploadProps {
-  patientId: string;
+  patientId?: string; // Made optional
   onUploadComplete?: () => void;
   onSuccess?: () => void;
   onError?: (message: string) => void;
@@ -52,7 +52,12 @@ export const CautionCardUpload: React.FC<CautionCardUploadProps> = ({
       // Create a new FormData instance for the caution card upload
       const uploadFormData = new FormData();
       uploadFormData.append('file', formData.get('file') as File);
-      uploadFormData.append('patientId', patientId);
+      
+      // Only append patientId if it exists and is not empty
+      if (patientId && patientId.trim() !== '') {
+        uploadFormData.append('patientId', patientId);
+      }
+      
       uploadFormData.append('bloodType', bloodType);
       uploadFormData.append('antibodies', JSON.stringify(antibodies));
       uploadFormData.append('transfusionRequirements', JSON.stringify(transfusionRequirements));
@@ -183,4 +188,4 @@ export const CautionCardUpload: React.FC<CautionCardUploadProps> = ({
       </form>
     </div>
   );
-}; 
+};
