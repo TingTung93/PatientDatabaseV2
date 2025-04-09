@@ -130,8 +130,11 @@ export const ReportManagement: React.FC<ReportManagementProps> = ({ patientId })
             id="file"
             onChange={handleFileChange}
             disabled={isProcessing}
-            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.txt,.rtf"
           />
+          <small className="file-types-hint">
+            Supported formats: PDF, DOC, DOCX, JPG, PNG, TXT, RTF
+          </small>
         </div>
 
         <div>
@@ -195,4 +198,4 @@ export const ReportManagement: React.FC<ReportManagementProps> = ({ patientId })
       </div>
     </div>
   );
-}; 
+};
