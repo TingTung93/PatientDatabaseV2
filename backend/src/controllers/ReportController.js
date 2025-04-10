@@ -4,12 +4,12 @@
  */
 const ReportService = require('../services/ReportService');
 const ReportRepository = require('../repositories/ReportRepository');
-const { db } = require('../database/init');
+const { dbInstance } = require('../database/init');
 const { ValidationError } = require('../errors/ValidationError');
 
 class ReportController {
   constructor() {
-    this.repository = new ReportRepository(db);
+    this.repository = new ReportRepository(dbInstance);
     this.service = new ReportService(this.repository);
   }
 

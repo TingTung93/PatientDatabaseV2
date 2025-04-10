@@ -1,0 +1,19 @@
+{
+  "name": "report-parser-test",
+  "version": "1.0.0",
+  "description": "Test for report parser",
+  "main": "report-parser-test.js",
+  "type": "module",
+  "scripts": {
+    "test": "node report-parser-test.js",
+    "upload": "node test-report-upload.js",
+    "direct": "node test-direct-upload.js",
+    "sqlite": "node test-sqlite.js",
+    "sqlite-direct": "node test-sqlite-direct.js"
+  },
+  "dependencies": {
+    "node-fetch": "^3.3.2",
+    "form-data": "^4.0.0",
+    "sqlite3": "^5.1.7"
+  }
+} 

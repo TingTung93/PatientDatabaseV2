@@ -2,14 +2,14 @@
 
 const CautionCardService = require('../services/CautionCardService');
 const CautionCardRepository = require('../repositories/CautionCardRepository');
-const { db } = require('../database/init');
+const { dbInstance } = require('../database/init');
 const { ValidationError } = require('../errors/ValidationError');
 const { StatusCodes } = require('http-status-codes');
 const { NotFoundError } = require('../errors');
 
 class CautionCardController {
   constructor() {
-    this.repository = new CautionCardRepository(db);
+    this.repository = new CautionCardRepository(dbInstance);
     this.service = new CautionCardService(this.repository);
   }
 

@@ -52,8 +52,8 @@ const PatientView: React.FC<PatientViewProps> = ({ patient, onUpdate, onDelete }
     >
   ) => {
     if (!onUpdate) return;
-    // Use patient.id (root ID) for the update call
-    await onUpdate(patient.id, values);
+    // Use patient.identification.id for the update call
+    await onUpdate(patient.identification.id, values);
     setIsEditing(false);
   };
 
@@ -61,8 +61,8 @@ const PatientView: React.FC<PatientViewProps> = ({ patient, onUpdate, onDelete }
     if (!onDelete || !window.confirm('Are you sure you want to delete this patient?')) return;
     setIsDeleting(true);
     try {
-      // Use patient.id (root ID) for the delete call
-      await onDelete(patient.id);
+      // Use patient.identification.id for the delete call
+      await onDelete(patient.identification.id);
       // No need to setIsDeleting(false) if component unmounts on success
     } catch (error) {
       console.error('Delete failed:', error);
@@ -94,7 +94,7 @@ const PatientView: React.FC<PatientViewProps> = ({ patient, onUpdate, onDelete }
     <div className="patient-view p-4 border rounded shadow-md">
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-xl font-semibold">
-          {patient.demographics.firstName} {patient.demographics.lastName} (ID: {patient.id})
+          {patient.demographics.firstName} {patient.demographics.lastName} (ID: {patient.identification.id})
         </h3>
         <div className="space-x-2">
           {onUpdate && (

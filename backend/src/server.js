@@ -42,6 +42,7 @@ import { getInstance as getWebSocketService } from './services/WebSocketService.
 import patientsRouter from './routes/patients.js';
 import cautionCardsRouter from './routes/caution-cards.js';
 import reportsRouter from './routes/reports.js';
+import testRouter from './routes/test.js';
 
 // Create Express app
 const app = express();
@@ -87,6 +88,7 @@ app.use('/api/v1', apiV1Router);
 apiV1Router.use('/patients', patientsRouter);
 apiV1Router.use('/caution-cards', cautionCardsRouter);
 apiV1Router.use('/reports', reportsRouter);
+apiV1Router.use('/test', testRouter);
 
 // Serve static files
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));

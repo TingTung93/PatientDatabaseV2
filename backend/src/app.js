@@ -14,6 +14,7 @@ const uploadRoutes = require('./routes/uploadRoutes');
 const cautionCardsRouter = require('./routes/caution-cards');
 const patientsRouter = require('./routes/patients');
 const reportsRouter = require('./routes/reports');
+const testRouter = require('./routes/test');
 const { initializeDatabase } = require('./database/init');
 const { notFoundHandler, asyncHandler } = require('./middleware/errorHandler');
 const { requestLogger, errorLogger, performanceMonitor } = require('./middleware/requestLogger');
@@ -84,6 +85,12 @@ app.use((err, req, res, next) => {
         message: err.message || 'Internal server error'
     });
 });
+
+// API Routes
+app.use('/api/v1/caution-cards', cautionCardsRouter);
+app.use('/api/v1/patients', patientsRouter);
+app.use('/api/v1/reports', reportsRouter);
+app.use('/api/v1/test', testRouter);
 
 // Export the app
 module.exports = app;

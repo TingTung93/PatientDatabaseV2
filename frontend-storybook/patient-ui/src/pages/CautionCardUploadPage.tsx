@@ -253,6 +253,14 @@ export const CautionCardUploadPage: React.FC = () => {
     setPatientSearchQuery(value);
   };
 
+  const handlePatientSelect = (patient: Patient) => {
+    setSelectedPatient({
+      id: patient.identification.id,
+      label: `${patient.demographics.firstName} ${patient.demographics.lastName}`,
+      patient
+    });
+  };
+
   return (
     <Container maxWidth="md">
       <Box sx={{ py: 4 }}>

@@ -11,6 +11,7 @@ import { body, param, query, validationResult } from 'express-validator';
 import { v4 as uuidv4 } from 'uuid';
 import validator from 'validator';
 import { fileURLToPath } from 'url';
+import { adaptCautionCardForFrontend, adaptCautionCardsForFrontend } from '../utils/data-adapters.js';
 
 const router = express.Router();
 const execAsync = promisify(exec);
@@ -46,19 +47,31 @@ router.get('/', async (req, res, next) => {
     const offset = parseInt(req.query.offset) || 0;
     
     // Get caution cards with patient information using SQLite
-    const cautionCards = db.prepare(`
-      SELECT c.*, p.name as patient_name 
+    const query = `
+      SELECT c.*, p.first_name, p.last_name
       FROM caution_cards c
       LEFT JOIN patients p ON c.patient_id = p.id
       ORDER BY c.created_at DESC
       LIMIT ? OFFSET ?
-    `).all(limit, offset);
+    `;
+    const cautionCards = await db.instance.all(query, [limit, offset]);
+    
+    // Add patient_name for backward compatibility
+    cautionCards.forEach(card => {
+      if (card.first_name || card.last_name) {
+        card.patient_name = `${card.first_name || ''} ${card.last_name || ''}`.trim();
+      }
+    });
     
     // Get total count for pagination
-    const { count } = db.prepare('SELECT COUNT(*) as count FROM caution_cards').get();
+    const countResult = await db.instance.get('SELECT COUNT(*) as count FROM caution_cards');
+    const count = countResult.count;
+    
+    // Adapt data for frontend
+    const adaptedCards = adaptCautionCardsForFrontend(cautionCards);
     
     res.status(200).json({
-      cautionCards,
+      cautionCards: adaptedCards,
       pagination: {
         total: count,
         limit,
@@ -73,15 +86,27 @@ router.get('/', async (req, res, next) => {
 // Get orphaned caution cards (must be before /:id route)
 router.get('/orphaned', async (req, res, next) => {
   try {
-    const orphanedCards = db.prepare(`
-      SELECT c.*, p.name as patient_name 
+    const query = `
+      SELECT c.*, p.first_name, p.last_name
       FROM caution_cards c
       LEFT JOIN patients p ON c.patient_id = p.id
       WHERE c.patient_id IS NULL
       ORDER BY c.created_at DESC
-    `).all();
+    `;
     
-    res.status(200).json(orphanedCards);
+    const orphanedCards = await db.instance.all(query);
+    
+    // Add patient_name for backward compatibility
+    orphanedCards.forEach(card => {
+      if (card.first_name || card.last_name) {
+        card.patient_name = `${card.first_name || ''} ${card.last_name || ''}`.trim();
+      }
+    });
+    
+    // Adapt data for frontend
+    const adaptedCards = adaptCautionCardsForFrontend(orphanedCards);
+    
+    res.status(200).json(adaptedCards);
   } catch (error) {
     next(error);
   }
@@ -108,19 +133,28 @@ router.get('/:id', validateId, async (req, res, next) => {
     const { id } = req.params;
     
     // Get caution card with patient information using SQLite
-    const cautionCard = db.prepare(`
-      SELECT c.*, p.name as patient_name 
+    const query = `
+      SELECT c.*, p.first_name, p.last_name
       FROM caution_cards c
       LEFT JOIN patients p ON c.patient_id = p.id
       WHERE c.id = ?
-    `).get(id);
+    `;
+    const cautionCard = await db.instance.get(query, [id]);
     
     // Check if caution card exists
     if (!cautionCard) {
       throw new NotFoundError(`Caution card with ID ${id} not found`);
     }
     
-    res.status(200).json(cautionCard);
+    // Add patient_name for backward compatibility
+    if (cautionCard.first_name || cautionCard.last_name) {
+      cautionCard.patient_name = `${cautionCard.first_name || ''} ${cautionCard.last_name || ''}`.trim();
+    }
+    
+    // Adapt data for frontend
+    const adaptedCard = adaptCautionCardForFrontend(cautionCard);
+    
+    res.status(200).json(adaptedCard);
   } catch (error) {
     next(error);
   }
@@ -137,12 +171,13 @@ router.post('/', upload.single('file'), async (req, res, next) => {
     }
 
     const now = new Date().toISOString();
-    const result = db.prepare(`
+    const query = `
       INSERT INTO caution_cards (
         blood_type, patient_id, file_name, image_path, mime_type,
         status, created_at, updated_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
+    `;
+    const params = [
       blood_type,
       patient_id,
       file.originalname,
@@ -151,10 +186,15 @@ router.post('/', upload.single('file'), async (req, res, next) => {
       'pending',
       now,
       now
-    );
-
-    const newCard = db.prepare('SELECT * FROM caution_cards WHERE id = ?').get(result.lastInsertRowid);
-    res.status(201).json(newCard);
+    ];
+    
+    const result = await db.instance.run(query, params);
+    const newCard = await db.instance.get('SELECT * FROM caution_cards WHERE id = ?', [result.lastID]);
+    
+    // Adapt data for frontend
+    const adaptedCard = adaptCautionCardForFrontend(newCard);
+    
+    res.status(201).json(adaptedCard);
   } catch (error) {
     next(error);
   }
@@ -167,29 +207,28 @@ router.put('/:id', upload.single('image'), async (req, res) => {
     const { patientId, bloodType } = req.body;
 
     // Check if caution card exists
-    const checkStmt = db.prepare('SELECT * FROM caution_cards WHERE id = ?');
-    const existingCard = checkStmt.get(id);
+    const existingCard = await db.instance.get('SELECT * FROM caution_cards WHERE id = ?', [id]);
 
     if (!existingCard) {
       return res.status(404).json({ error: 'Caution card not found' });
     }
 
     // Build update query
-    let query = 'UPDATE caution_cards SET updatedAt = CURRENT_TIMESTAMP';
+    let query = 'UPDATE caution_cards SET updated_at = CURRENT_TIMESTAMP';
     const params = [];
 
     if (patientId !== undefined) {
-      query += ', patientId = ?';
+      query += ', patient_id = ?';
       params.push(patientId || null);
     }
 
     if (bloodType !== undefined) {
-      query += ', bloodType = ?';
+      query += ', blood_type = ?';
       params.push(bloodType);
     }
 
     if (req.file) {
-      query += ', imagePath = ?';
+      query += ', image_path = ?';
       params.push(req.file.path);
     }
 
@@ -197,12 +236,10 @@ router.put('/:id', upload.single('image'), async (req, res) => {
     params.push(id);
 
     // Execute update
-    const updateStmt = db.prepare(query);
-    const result = updateStmt.run(...params);
+    await db.instance.run(query, params);
 
     // Fetch updated caution card
-    const getStmt = db.prepare('SELECT * FROM caution_cards WHERE id = ?');
-    const updatedCard = getStmt.get(id);
+    const updatedCard = await db.instance.get('SELECT * FROM caution_cards WHERE id = ?', [id]);
 
     // Import the event emitters
     const { emitCautionCardUpdated, emitCautionCardFinalized } = require('../events');
@@ -211,8 +248,8 @@ router.put('/:id', upload.single('image'), async (req, res) => {
     await emitCautionCardUpdated(updatedCard);
 
     // If card is linked to a patient, emit finalized event
-    if (updatedCard.patientId) {
-      await emitCautionCardFinalized(id, 'linked', updatedCard.patientId);
+    if (updatedCard.patient_id) {
+      await emitCautionCardFinalized(id, 'linked', updatedCard.patient_id);
     }
 
     res.json(updatedCard);
@@ -227,11 +264,15 @@ router.delete('/:id', async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    const result = db.prepare('DELETE FROM caution_cards WHERE id = ? RETURNING *').run(id);
-
-    if (result.rows.length === 0) {
+    // First get the caution card to be deleted
+    const cardToDelete = await db.instance.get('SELECT * FROM caution_cards WHERE id = ?', [id]);
+    
+    if (!cardToDelete) {
       throw new NotFoundError(`Caution card with ID ${id} not found`);
     }
+    
+    // Delete the card
+    await db.instance.run('DELETE FROM caution_cards WHERE id = ?', [id]);
 
     res.json({ message: 'Caution card deleted successfully' });
   } catch (error) {
@@ -246,15 +287,18 @@ router.get('/status/unlinked', async (req, res, next) => {
     const offset = parseInt(req.query.offset) || 0;
     
     // Get unlinked caution cards
-    const cautionCards = db.prepare(`
+    const query = `
       SELECT * FROM caution_cards
-      WHERE patientId IS NULL
-      ORDER BY createdAt DESC
+      WHERE patient_id IS NULL
+      ORDER BY created_at DESC
       LIMIT ? OFFSET ?
-    `).all(limit, offset);
+    `;
+    
+    const cautionCards = await db.instance.all(query, [limit, offset]);
     
     // Get total count for pagination
-    const { count } = db.prepare('SELECT COUNT(*) as count FROM caution_cards WHERE patientId IS NULL').get();
+    const countResult = await db.instance.get('SELECT COUNT(*) as count FROM caution_cards WHERE patient_id IS NULL');
+    const count = countResult.count;
     
     res.status(200).json({
       cautionCards,
@@ -276,17 +320,18 @@ router.get('/status/pending', async (req, res, next) => {
     const offset = parseInt(req.query.offset) || 0;
     
     // Get pending caution cards
-    const cautionCards = db.prepare(`
-      SELECT c.*, p.name as patient_name 
+    const cautionCards = await db.instance.all(`
+      SELECT c.*, p.first_name, p.last_name
       FROM caution_cards c
-      LEFT JOIN patients p ON c.patientId = p.id
+      LEFT JOIN patients p ON c.patient_id = p.id
       WHERE c.status = 'pending'
-      ORDER BY c.createdAt DESC
+      ORDER BY c.created_at DESC
       LIMIT ? OFFSET ?
-    `).all(limit, offset);
+    `, [limit, offset]);
     
     // Get total count for pagination
-    const { count } = db.prepare('SELECT COUNT(*) as count FROM caution_cards WHERE status = $1').get('pending');
+    const countResult = await db.instance.get('SELECT COUNT(*) as count FROM caution_cards WHERE status = $1', ['pending']);
+    const count = countResult.count;
     
     res.status(200).json({
       cautionCards,
@@ -321,7 +366,7 @@ router.post('/:id/review', async (req, res, next) => {
     }
     
     // Check if caution card exists
-    const checkResult = db.prepare('SELECT * FROM caution_cards WHERE id = ?').get(cardId);
+    const checkResult = await db.instance.get('SELECT * FROM caution_cards WHERE id = ?', [cardId]);
     
     if (!checkResult) {
       throw new NotFoundError(`Caution card with ID ${id} not found`);
@@ -332,31 +377,25 @@ router.post('/:id/review', async (req, res, next) => {
     // Format bloodType and patientId as JSON if they are arrays
     const formattedBloodType = bloodType 
       ? (typeof bloodType === 'string' ? bloodType : JSON.stringify(bloodType)) 
-      : existingCard.bloodType;
+      : existingCard.blood_type;
       
     const formattedPatientId = patientId
       ? (typeof patientId === 'string' ? patientId : JSON.stringify(patientId))
-      : existingCard.patientId;
+      : existingCard.patient_id;
     
     // Update caution card with review details
-    const result = db.prepare(`
+    const result = await db.instance.run(`
       UPDATE caution_cards SET
-        bloodType = COALESCE($1, bloodType),
-        patientId = COALESCE($2, patientId),
+        blood_type = COALESCE($1, blood_type),
+        patient_id = COALESCE($2, patient_id),
         status = 'reviewed',
         reviewed_by = $3,
         reviewed_date = $4,
-        updatedAt = CURRENT_TIMESTAMP,
+        updated_at = CURRENT_TIMESTAMP,
         updated_by = $3
       WHERE id = $5
       RETURNING *
-    `).run(
-      formattedBloodType,
-      formattedPatientId,
-      reviewed_by,
-      reviewed_date,
-      cardId
-    );
+    `, [formattedBloodType, formattedPatientId, reviewed_by, reviewed_date, cardId]);
     
     res.json(result.changes > 0 ? result.lastInsertRowid : result.rows[0]);
   } catch (error) {
@@ -442,8 +481,8 @@ router.post('/process', upload.single('file'), async (req, res, next) => {
 
     // If patientId is provided from OCR, check if the patient exists
     if (patientId) {
-      const patientStmt = db.prepare('SELECT id FROM patients WHERE id = ?');
-      if (patientStmt.get(patientId) === undefined) {
+      const patientStmt = await db.instance.get('SELECT id FROM patients WHERE id = ?', [patientId]);
+      if (patientStmt === undefined) {
         // Decide how to handle: Throw error, set patientId to null, or create a placeholder? 
         // For now, let's set patientId to null and continue saving the card as orphaned.
         console.warn(`Patient with ID ${patientId} found in OCR but not in DB. Saving card as orphaned.`);
@@ -459,12 +498,12 @@ router.post('/process', upload.single('file'), async (req, res, next) => {
     });
 
     // Insert new caution card directly
-    const insertResult = db.prepare(`
+    const insertResult = await db.instance.run(`
       INSERT INTO caution_cards (
-        bloodType, patientId, file_name, imagePath, mime_type,
-        status, ocr_text, metadata, createdAt, updatedAt
+        blood_type, patient_id, file_name, image_path, mime_type,
+        status, ocr_text, metadata, created_at, updated_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-    `).run(
+    `, [
       bloodType || null, // Handle potential null/undefined bloodType
       patientId || null, // Use potentially corrected patientId
       req.file.filename, // Original filename might be better: path.basename(imagePath)
@@ -473,15 +512,18 @@ router.post('/process', upload.single('file'), async (req, res, next) => {
       'processed', // Set status to 'processed' or 'pending_review'?
       ocr_text, // Store the full JSON OCR data
       metadata
-    );
+    ]);
 
-    const newCardId = insertResult.lastInsertRowid;
+    const newCardId = insertResult.lastID;
 
     // Fetch the newly created card to return it
-    const newCard = db.prepare('SELECT * FROM caution_cards WHERE id = ?').get(newCardId);
+    const newCard = await db.instance.get('SELECT * FROM caution_cards WHERE id = ?', [newCardId]);
+    
+    // Adapt data for frontend
+    const adaptedCard = adaptCautionCardForFrontend(newCard);
     
     // Respond with the created caution card record
-    res.status(201).json(newCard); // Use 201 Created status
+    res.status(201).json(adaptedCard); // Use 201 Created status
   } catch (error) {
     // Delete the uploaded file if there was an error
     if (req.file) {

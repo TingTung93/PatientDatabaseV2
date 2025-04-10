@@ -1,11 +1,17 @@
 import React from 'react';
-import { List, ListItem, ListItemText, IconButton, CircularProgress } from '@mui/material';
-import DeleteIcon from '@mui/icons-material/Delete'; // Correct import path
+import {
+  List,
+  ListItem,
+  ListItemText,
+  IconButton,
+  CircularProgress,
+} from '@mui/material';
+import { Delete as DeleteIcon } from '@mui/icons-material';
 import { Patient } from '../types/patient';
 
-export interface VirtualizedPatientListProps {
+interface VirtualizedPatientListProps {
   patients: Patient[];
-  onDelete: (patientId: string | number) => void;
+  onDelete: (id: string | number) => void;
   isDeleting: boolean;
   deletingId?: string | number;
 }
@@ -20,15 +26,15 @@ export const VirtualizedPatientList: React.FC<VirtualizedPatientListProps> = ({
     <List>
       {patients.map(patient => (
         <ListItem
-          key={patient.id}
+          key={patient.identification.id}
           secondaryAction={
             <IconButton
               edge="end"
               aria-label="delete"
-              onClick={() => onDelete(patient.id)}
-              disabled={isDeleting && deletingId === patient.id}
+              onClick={() => onDelete(patient.identification.id)}
+              disabled={isDeleting && deletingId === patient.identification.id}
             >
-              {isDeleting && deletingId === patient.id ? (
+              {isDeleting && deletingId === patient.identification.id ? (
                 <CircularProgress size={24} />
               ) : (
                 <DeleteIcon />

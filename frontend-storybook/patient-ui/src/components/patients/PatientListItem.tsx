@@ -14,12 +14,12 @@ const PatientListItem: React.FC<PatientListItemProps> = memo(
     const navigate = useNavigate();
 
     const handleClick = () => {
-      navigate(`/patients/${patient.id}`);
+      navigate(`/patients/${patient.identification.id}`);
     };
 
     const handleDelete = (e: React.MouseEvent) => {
       e.stopPropagation();
-      onDelete(patient.id);
+      onDelete(patient.identification.id);
     };
 
     return (

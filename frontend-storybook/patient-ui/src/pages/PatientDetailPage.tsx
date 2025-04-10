@@ -42,31 +42,7 @@ const PatientDetailPageContent: React.FC = () => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
 
-  const { data: patient, isLoading, error, refetch } = usePatient(id!);
-  const deletePatientMutation = useDeletePatient();
-
-  const handleDeleteClick = () => {
-    setIsDeleteModalOpen(true);
-  };
-
-  const handleDeleteConfirm = () => {
-    if (id) {
-      deletePatientMutation.mutate(id, {
-        onSuccess: () => {
-          console.log('Patient deleted successfully');
-          navigate('/patients');
-          setIsDeleteModalOpen(false);
-        },
-        onError: err => {
-          console.error(`Failed to delete patient: ${err.message}`);
-          setIsDeleteModalOpen(false);
-        },
-      });
-    } else {
-      setIsDeleteModalOpen(false);
-    }
-  };
-
+  // Return early if no ID is provided
   if (!id) {
     return (
       <FallbackError
@@ -75,6 +51,27 @@ const PatientDetailPageContent: React.FC = () => {
       />
     );
   }
+
+  const { data: patient, isLoading, error, refetch } = usePatient(id);
+  const deletePatientMutation = useDeletePatient();
+
+  const handleDeleteClick = () => {
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleDeleteConfirm = () => {
+    deletePatientMutation.mutate(id, {
+      onSuccess: () => {
+        console.log('Patient deleted successfully');
+        navigate('/patients');
+        setIsDeleteModalOpen(false);
+      },
+      onError: err => {
+        console.error(`Failed to delete patient: ${err.message}`);
+        setIsDeleteModalOpen(false);
+      },
+    });
+  };
 
   if (isLoading) {
     return (

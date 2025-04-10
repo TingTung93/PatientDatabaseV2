@@ -1,14 +1,17 @@
-const { db } = require('../database/init');
+const { dbInstance } = require('../database/init');
 const logger = require('../utils/logger');
+const BaseRepository = require('./BaseRepository');
 
-class OrphanedCautionCardRepository {
-  constructor() {
-    this.db = db;
+class OrphanedCautionCardRepository extends BaseRepository {
+  constructor(db) {
+    super(db || dbInstance);
+    this.tableName = 'orphaned_caution_cards';
   }
 
   async findAll() {
     try {
-      return this.db.prepare('SELECT * FROM orphaned_caution_cards ORDER BY created_at DESC').all();
+      const query = 'SELECT * FROM orphaned_caution_cards ORDER BY created_at DESC';
+      return await this.query(query);
     } catch (error) {
       logger.error('Error in findAll:', error);
       throw error;
@@ -17,7 +20,8 @@ class OrphanedCautionCardRepository {
 
   async findById(id) {
     try {
-      return this.db.prepare('SELECT * FROM orphaned_caution_cards WHERE id = ?').get(id);
+      const query = 'SELECT * FROM orphaned_caution_cards WHERE id = ?';
+      return await this.queryOne(query, [id]);
     } catch (error) {
       logger.error('Error in findById:', error);
       throw error;
@@ -26,10 +30,8 @@ class OrphanedCautionCardRepository {
 
   async create(cardData) {
     try {
-      const stmt = this.db.prepare(
-        'INSERT INTO orphaned_caution_cards (file_path, file_name, file_size, mime_type, blood_type, antibodies, transfusion_requirements, metadata) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
-      );
-      const result = stmt.run(
+      const query = 'INSERT INTO orphaned_caution_cards (file_path, file_name, file_size, mime_type, blood_type, antibodies, transfusion_requirements, metadata) VALUES (?, ?, ?, ?, ?, ?, ?, ?)';
+      const params = [
         cardData.filePath,
         cardData.fileName,
         cardData.fileSize,
@@ -38,8 +40,10 @@ class OrphanedCautionCardRepository {
         JSON.stringify(cardData.antibodies || []),
         JSON.stringify(cardData.transfusionRequirements || []),
         JSON.stringify(cardData.metadata || {})
-      );
-      return { id: result.lastInsertRowid, ...cardData };
+      ];
+      
+      const result = await this.run(query, params);
+      return { id: result.lastID, ...cardData };
     } catch (error) {
       logger.error('Error in create:', error);
       throw error;
@@ -48,16 +52,16 @@ class OrphanedCautionCardRepository {
 
   async update(id, cardData) {
     try {
-      const stmt = this.db.prepare(
-        'UPDATE orphaned_caution_cards SET blood_type = ?, antibodies = ?, transfusion_requirements = ?, metadata = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
-      );
-      const result = stmt.run(
+      const query = 'UPDATE orphaned_caution_cards SET blood_type = ?, antibodies = ?, transfusion_requirements = ?, metadata = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?';
+      const params = [
         cardData.bloodType,
         JSON.stringify(cardData.antibodies || []),
         JSON.stringify(cardData.transfusionRequirements || []),
         JSON.stringify(cardData.metadata || {}),
         id
-      );
+      ];
+      
+      const result = await this.run(query, params);
       return result.changes > 0;
     } catch (error) {
       logger.error('Error in update:', error);
@@ -67,8 +71,8 @@ class OrphanedCautionCardRepository {
 
   async delete(id) {
     try {
-      const stmt = this.db.prepare('DELETE FROM orphaned_caution_cards WHERE id = ?');
-      const result = stmt.run(id);
+      const query = 'DELETE FROM orphaned_caution_cards WHERE id = ?';
+      const result = await this.run(query, [id]);
       return result.changes > 0;
     } catch (error) {
       logger.error('Error in delete:', error);
@@ -78,9 +82,8 @@ class OrphanedCautionCardRepository {
 
   async searchByBloodType(bloodType) {
     try {
-      return this.db.prepare(
-        'SELECT * FROM orphaned_caution_cards WHERE blood_type = ? ORDER BY created_at DESC'
-      ).all(bloodType);
+      const query = 'SELECT * FROM orphaned_caution_cards WHERE blood_type = ? ORDER BY created_at DESC';
+      return await this.query(query, [bloodType]);
     } catch (error) {
       logger.error('Error in searchByBloodType:', error);
       throw error;
@@ -90,9 +93,8 @@ class OrphanedCautionCardRepository {
   async searchByAntibodies(antibody) {
     try {
       // Note: This is a simple LIKE search since we're storing antibodies as JSON
-      return this.db.prepare(
-        "SELECT * FROM orphaned_caution_cards WHERE antibodies LIKE ? ORDER BY created_at DESC"
-      ).all(`%${antibody}%`);
+      const query = "SELECT * FROM orphaned_caution_cards WHERE antibodies LIKE ? ORDER BY created_at DESC";
+      return await this.query(query, [`%${antibody}%`]);
     } catch (error) {
       logger.error('Error in searchByAntibodies:', error);
       throw error;
@@ -100,4 +102,4 @@ class OrphanedCautionCardRepository {
   }
 }
 
-module.exports = new OrphanedCautionCardRepository();
+module.exports = OrphanedCautionCardRepository;

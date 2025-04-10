@@ -1,18 +1,25 @@
-const { db } = require('../database/init');
+const { dbInstance } = require('../database/init');
 const bcrypt = require('bcrypt');
 const { ValidationError } = require('../errors/ValidationError');
+const UserRepository = require('../repositories/UserRepository');
 
 class UserController {
+  constructor() {
+    this.repository = new UserRepository(dbInstance);
+  }
+
   // Get all users
   async getAllUsers() {
     try {
-      const users = db.prepare(`
+      const query = `
         SELECT u.*, r.name as role_name, r.permissions
         FROM users u
         JOIN roles r ON u.role_id = r.id
         ORDER BY u.username
-      `).all();
-
+      `;
+      
+      const users = await this.repository.query(query);
+      
       return users.map(user => ({
         ...user,
         permissions: JSON.parse(user.permissions)
@@ -26,12 +33,14 @@ class UserController {
   // Get user by username
   async getUserByUsername(username) {
     try {
-      const user = db.prepare(`
+      const query = `
         SELECT u.*, r.name as role_name, r.permissions
         FROM users u
         JOIN roles r ON u.role_id = r.id
         WHERE u.username = ?
-      `).get(username);
+      `;
+      
+      const user = await this.repository.queryOne(query, [username]);
 
       if (!user) {
         throw new ValidationError('User not found', 404);
@@ -53,10 +62,12 @@ class UserController {
       const { username, email, password, role, firstName, lastName } = userData;
 
       // Check if username or email already exists
-      const existingUser = db.prepare(`
+      const query = `
         SELECT username, email FROM users 
         WHERE username = ? OR email = ?
-      `).get(username, email);
+      `;
+      
+      const existingUser = await this.repository.queryOne(query, [username, email]);
 
       if (existingUser) {
         throw new ValidationError(
@@ -66,7 +77,10 @@ class UserController {
       }
 
       // Get role ID
-      const roleId = db.prepare('SELECT id FROM roles WHERE name = ?').get(role)?.id;
+      const roleQuery = 'SELECT id FROM roles WHERE name = ?';
+      const roleResult = await this.repository.queryOne(roleQuery, [role]);
+      const roleId = roleResult?.id;
+      
       if (!roleId) {
         throw new ValidationError('Invalid role', 400);
       }
@@ -75,14 +89,18 @@ class UserController {
       const passwordHash = await bcrypt.hash(password, 10);
 
       // Insert user
-      const result = db.prepare(`
+      const insertQuery = `
         INSERT INTO users (
           username, email, password_hash, role_id, 
           first_name, last_name, is_active, created_at
         ) VALUES (?, ?, ?, ?, ?, ?, 1, datetime('now'))
-      `).run(username, email, passwordHash, roleId, firstName, lastName);
+      `;
+      
+      const result = await this.repository.run(insertQuery, [
+        username, email, passwordHash, roleId, firstName, lastName
+      ]);
 
-      return this.getUserById(result.lastInsertRowid);
+      return this.getUserById(result.lastID);
     } catch (error) {
       console.error('Error creating user:', error);
       throw error instanceof ValidationError ? error : new Error('Failed to create user');
@@ -96,10 +114,12 @@ class UserController {
 
       // Check if email is already taken by another user
       if (email) {
-        const existingUser = db.prepare(`
+        const emailQuery = `
           SELECT username FROM users 
           WHERE email = ? AND username != ?
-        `).get(email, username);
+        `;
+        
+        const existingUser = await this.repository.queryOne(emailQuery, [email, username]);
 
         if (existingUser) {
           throw new ValidationError('Email already exists', 400);
@@ -107,7 +127,7 @@ class UserController {
       }
 
       // Update user
-      const result = db.prepare(`
+      const updateQuery = `
         UPDATE users 
         SET first_name = COALESCE(?, first_name),
             last_name = COALESCE(?, last_name),
@@ -115,7 +135,11 @@ class UserController {
             is_active = COALESCE(?, is_active),
             updated_at = datetime('now')
         WHERE username = ?
-      `).run(firstName, lastName, email, isActive, username);
+      `;
+      
+      const result = await this.repository.run(updateQuery, [
+        firstName, lastName, email, isActive, username
+      ]);
 
       if (result.changes === 0) {
         throw new ValidationError('User not found', 404);
@@ -132,7 +156,9 @@ class UserController {
   async changePassword(username, currentPassword, newPassword) {
     try {
       // Get user
-      const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username);
+      const userQuery = 'SELECT * FROM users WHERE username = ?';
+      const user = await this.repository.queryOne(userQuery, [username]);
+      
       if (!user) {
         throw new ValidationError('User not found', 404);
       }
@@ -147,11 +173,13 @@ class UserController {
       const passwordHash = await bcrypt.hash(newPassword, 10);
 
       // Update password
-      db.prepare(`
+      const passwordQuery = `
         UPDATE users 
         SET password_hash = ?, updated_at = datetime('now')
         WHERE username = ?
-      `).run(passwordHash, username);
+      `;
+      
+      await this.repository.run(passwordQuery, [passwordHash, username]);
 
       return { message: 'Password updated successfully' };
     } catch (error) {
@@ -164,17 +192,22 @@ class UserController {
   async assignRole(username, role) {
     try {
       // Get role ID
-      const roleId = db.prepare('SELECT id FROM roles WHERE name = ?').get(role)?.id;
+      const roleQuery = 'SELECT id FROM roles WHERE name = ?';
+      const roleResult = await this.repository.queryOne(roleQuery, [role]);
+      const roleId = roleResult?.id;
+      
       if (!roleId) {
         throw new ValidationError('Invalid role', 400);
       }
 
       // Update user role
-      const result = db.prepare(`
+      const updateQuery = `
         UPDATE users 
         SET role_id = ?, updated_at = datetime('now')
         WHERE username = ?
-      `).run(roleId, username);
+      `;
+      
+      const result = await this.repository.run(updateQuery, [roleId, username]);
 
       if (result.changes === 0) {
         throw new ValidationError('User not found', 404);
@@ -189,12 +222,14 @@ class UserController {
 
   // Helper method to get user by ID
   async getUserById(id) {
-    const user = db.prepare(`
+    const query = `
       SELECT u.*, r.name as role_name, r.permissions
       FROM users u
       JOIN roles r ON u.role_id = r.id
       WHERE u.id = ?
-    `).get(id);
+    `;
+    
+    const user = await this.repository.queryOne(query, [id]);
 
     if (!user) {
       throw new ValidationError('User not found', 404);

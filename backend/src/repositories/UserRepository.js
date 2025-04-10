@@ -3,17 +3,20 @@
  * This class handles all database operations related to users.
  */
 const bcrypt = require('bcrypt');
-const { db } = require('../database/init');
+const { dbInstance } = require('../database/init');
 const logger = require('../utils/logger');
+const BaseRepository = require('./BaseRepository');
 
-class UserRepository {
-  constructor() {
-    this.db = db;
+class UserRepository extends BaseRepository {
+  constructor(db) {
+    super(db || dbInstance);
+    this.tableName = 'users';
   }
 
   async findAll() {
     try {
-      return this.db.prepare('SELECT id, username, email, role, created_at, updated_at FROM users ORDER BY username').all();
+      const query = 'SELECT id, username, email, role, created_at, updated_at FROM users ORDER BY username';
+      return await this.query(query);
     } catch (error) {
       logger.error('Error in findAll:', error);
       throw error;
@@ -22,7 +25,8 @@ class UserRepository {
 
   async findById(id) {
     try {
-      return this.db.prepare('SELECT id, username, email, role, created_at, updated_at FROM users WHERE id = ?').get(id);
+      const query = 'SELECT id, username, email, role, created_at, updated_at FROM users WHERE id = ?';
+      return await this.queryOne(query, [id]);
     } catch (error) {
       logger.error('Error in findById:', error);
       throw error;
@@ -31,7 +35,8 @@ class UserRepository {
 
   async findByUsername(username) {
     try {
-      return this.db.prepare('SELECT * FROM users WHERE username = ?').get(username);
+      const query = 'SELECT * FROM users WHERE username = ?';
+      return await this.queryOne(query, [username]);
     } catch (error) {
       logger.error('Error in findByUsername:', error);
       throw error;
@@ -40,7 +45,8 @@ class UserRepository {
 
   async findByEmail(email) {
     try {
-      return this.db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+      const query = 'SELECT * FROM users WHERE email = ?';
+      return await this.queryOne(query, [email]);
     } catch (error) {
       logger.error('Error in findByEmail:', error);
       throw error;
@@ -50,17 +56,18 @@ class UserRepository {
   async create(userData) {
     try {
       const hashedPassword = await bcrypt.hash(userData.password, 10);
-      const stmt = this.db.prepare(
-        'INSERT INTO users (username, email, password_hash, role) VALUES (?, ?, ?, ?)'
-      );
-      const result = stmt.run(
+      const query = 'INSERT INTO users (username, email, password_hash, role) VALUES (?, ?, ?, ?)';
+      const params = [
         userData.username,
         userData.email,
         hashedPassword,
         userData.role || 'user'
-      );
+      ];
+      
+      const result = await this.run(query, params);
+      
       return {
-        id: result.lastInsertRowid,
+        id: result.lastID,
         username: userData.username,
         email: userData.email,
         role: userData.role || 'user'
@@ -101,8 +108,7 @@ class UserRepository {
       query += updates.join(', ') + ', updated_at = CURRENT_TIMESTAMP WHERE id = ?';
       params.push(id);
 
-      const stmt = this.db.prepare(query);
-      const result = stmt.run(...params);
+      const result = await this.run(query, params);
       return result.changes > 0;
     } catch (error) {
       logger.error('Error in update:', error);
@@ -112,8 +118,8 @@ class UserRepository {
 
   async delete(id) {
     try {
-      const stmt = this.db.prepare('DELETE FROM users WHERE id = ?');
-      const result = stmt.run(id);
+      const query = 'DELETE FROM users WHERE id = ?';
+      const result = await this.run(query, [id]);
       return result.changes > 0;
     } catch (error) {
       logger.error('Error in delete:', error);
@@ -135,4 +141,4 @@ class UserRepository {
   }
 }
 
-module.exports = new UserRepository();
+module.exports = UserRepository;

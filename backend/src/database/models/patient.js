@@ -1,16 +1,13 @@
-const { Model, DataTypes } = require('sequelize');
+import { Model, DataTypes } from 'sequelize';
 
-module.exports = (sequelize, Sequelize) => {
+export default (sequelize) => {
   class Patient extends Model {
     static associate(models) {
-      Patient.hasMany(models.OcrResult, {
-        foreignKey: 'patientId',
-        as: 'ocrResults'
-      });
-      // Keep existing associations if any
+      Patient.hasMany(models.Report, { foreignKey: 'patient_id' });
+      Patient.hasMany(models.CautionCard, { foreignKey: 'patient_id' });
     }
   }
-
+  
   Patient.init({
     id: {
       type: DataTypes.UUID,
@@ -31,108 +28,59 @@ module.exports = (sequelize, Sequelize) => {
         notEmpty: true
       }
     },
-    medical_record_number: {
-      type: DataTypes.STRING,
-      allowNull: false,
-      unique: true,
-      validate: {
-        notEmpty: true
-      }
-    },
     date_of_birth: {
       type: DataTypes.DATEONLY,
       allowNull: false
     },
     gender: {
-      type: DataTypes.ENUM('M', 'F', 'O'),
-      defaultValue: 'O',
-      allowNull: false
+      type: DataTypes.STRING
+    },
+    medical_record_number: {
+      type: DataTypes.STRING,
+      unique: true
     },
     contact_number: {
+      type: DataTypes.STRING
+    },
+    email: {
       type: DataTypes.STRING,
-      allowNull: true
+      validate: {
+        isEmail: true
+      }
+    },
+    address: {
+      type: DataTypes.TEXT
+    },
+    emergency_contact: {
+      type: DataTypes.TEXT
     },
     blood_type: {
-      type: DataTypes.ENUM('A POS', 'A NEG', 'B POS', 'B NEG', 'AB POS', 'AB NEG', 'O POS', 'O NEG'),
-      allowNull: false
-    },
-    antigen_phenotype: {
-      type: DataTypes.STRING,
-      allowNull: true
-    },
-    transfusion_restrictions: {
-      type: DataTypes.TEXT,
-      allowNull: true
-    },
-    antibodies: {
-      type: DataTypes.JSON,
-      defaultValue: [],
-      allowNull: false
-    },
-    medical_history: {
-      type: DataTypes.TEXT,
-      allowNull: true
+      type: DataTypes.STRING
     },
     allergies: {
-      type: DataTypes.TEXT,
-      allowNull: true
+      type: DataTypes.TEXT
     },
-    current_medications: {
-      type: DataTypes.TEXT,
-      allowNull: true
+    medical_conditions: {
+      type: DataTypes.TEXT
     },
-    comments: {
-      type: DataTypes.JSON,
-      defaultValue: [],
-      allowNull: false
+    medications: {
+      type: DataTypes.TEXT
     },
-    created_by: {
-      type: DataTypes.UUID,
-      allowNull: true,
-      references: {
-        model: 'Users',
-        key: 'id'
-      }
-    },
-    updated_by: {
-      type: DataTypes.UUID,
-      allowNull: true,
-      references: {
-        model: 'Users',
-        key: 'id'
-      }
-    },
-    deleted_at: {
-      type: DataTypes.DATE,
-      allowNull: true
+    notes: {
+      type: DataTypes.TEXT
     }
   }, {
     sequelize,
     modelName: 'Patient',
     tableName: 'Patients',
-    timestamps: true,
-    paranoid: true,
-    deletedAt: 'deleted_at',
+    underscored: true,
     indexes: [
       {
         unique: true,
         fields: ['medical_record_number']
-      },
-      {
-        fields: ['first_name', 'last_name']
-      },
-      {
-        fields: ['date_of_birth']
-      },
-      {
-        fields: ['created_by']
-      },
-      {
-        fields: ['updated_by']
       }
-    ],
-    comment: 'Stores patient information'
+    ]
   });
-
+  
   return Patient;
 };

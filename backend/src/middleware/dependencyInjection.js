@@ -4,7 +4,7 @@
  * This middleware initializes repositories and services and attaches them
  * to the request object for use in route handlers.
  */
-const db = require('../database/db');
+const { dbInstance } = require('../database/init');
 const OcrResultRepository = require('../repositories/OcrResultRepository');
 const PatientRepository = require('../repositories/PatientRepository');
 const UserRepository = require('../repositories/UserRepository');
@@ -17,9 +17,9 @@ const PatientService = require('../services/PatientService');
  */
 function injectDependencies(req, res, next) {
   // Initialize repositories
-  const patientRepository = new PatientRepository(db);
-  const userRepository = new UserRepository(db);
-  const ocrResultRepository = new OcrResultRepository(db);
+  const patientRepository = new PatientRepository(dbInstance);
+  const userRepository = new UserRepository(dbInstance);
+  const ocrResultRepository = new OcrResultRepository(dbInstance);
   
   // Initialize services with their required repositories
   const patientService = new PatientService(patientRepository);

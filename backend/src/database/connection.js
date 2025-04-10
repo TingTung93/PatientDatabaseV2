@@ -1,22 +1,70 @@
-const path = require('path');
-const { Sequelize } = require('sequelize');
-const config = require('./config');
-const logger = require('../utils/logger');
+import { Sequelize } from 'sequelize';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
+import logger from '../utils/logger';
+
+// Load environment variables
+dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Database configuration
+const dbConfig = {
+  development: {
+    database: process.env.DB_NAME || 'patient_info_dev',
+    username: process.env.DB_USER || 'postgres',
+    password: process.env.DB_PASSWORD || 'postgres',
+    host: process.env.DB_HOST || 'localhost',
+    port: process.env.DB_PORT || 5432,
+    dialect: 'postgres',
+    logging: console.log
+  },
+  test: {
+    database: process.env.TEST_DB_NAME || 'patient_info_test',
+    username: process.env.TEST_DB_USER || 'postgres',
+    password: process.env.TEST_DB_PASSWORD || 'postgres',
+    host: process.env.TEST_DB_HOST || 'localhost',
+    port: process.env.TEST_DB_PORT || 5432,
+    dialect: 'postgres',
+    logging: false
+  },
+  production: {
+    database: process.env.DB_NAME,
+    username: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    host: process.env.DB_HOST,
+    port: process.env.DB_PORT || 5432,
+    dialect: 'postgres',
+    logging: false,
+    dialectOptions: {
+      ssl: {
+        require: true,
+        rejectUnauthorized: false
+      }
+    }
+  }
+};
 
 // Get environment
 const env = process.env.NODE_ENV || 'development';
-const dbConfig = config[env];
+const config = dbConfig[env];
 
-// Create Sequelize instance
-const sequelize = new Sequelize({
-  ...dbConfig,
-  logging: (msg) => logger.debug(msg),
-  pool: {
-    max: 1,
-    idle: Infinity,
-    maxUses: Infinity
+// Create sequelize instance
+const sequelize = new Sequelize(
+  config.database,
+  config.username,
+  config.password,
+  {
+    host: config.host,
+    port: config.port,
+    dialect: config.dialect,
+    logging: config.logging,
+    dialectOptions: config.dialectOptions
   }
-});
+);
 
 // Test connection
 async function testConnection() {
@@ -41,7 +89,5 @@ async function initializeDatabase() {
   }
 }
 
-// Export connection and initialization functions
-module.exports = sequelize;
-module.exports.testConnection = testConnection;
-module.exports.initializeDatabase = initializeDatabase;
+export default sequelize;
+export { testConnection, initializeDatabase };

@@ -4,12 +4,12 @@
  */
 const PatientService = require('../services/PatientService');
 const PatientRepository = require('../repositories/PatientRepository');
-const { db } = require('../database/init');
+const { dbInstance } = require('../database/init');
 const { ValidationError } = require('../errors/ValidationError');
 
 class PatientController {
   constructor() {
-    this.repository = new PatientRepository(db);
+    this.repository = new PatientRepository(dbInstance);
     this.service = new PatientService(this.repository);
   }
 

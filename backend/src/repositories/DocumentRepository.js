@@ -1,14 +1,17 @@
-const { db } = require('../database/init');
+const { dbInstance } = require('../database/init');
 const logger = require('../utils/logger');
+const BaseRepository = require('./BaseRepository');
 
-class DocumentRepository {
-  constructor() {
-    this.db = db;
+class DocumentRepository extends BaseRepository {
+  constructor(db) {
+    super(db || dbInstance);
+    this.tableName = 'documents';
   }
 
   async findAll() {
     try {
-      return this.db.prepare('SELECT * FROM documents ORDER BY created_at DESC').all();
+      const query = 'SELECT * FROM documents ORDER BY created_at DESC';
+      return await this.query(query);
     } catch (error) {
       logger.error('Error in findAll:', error);
       throw error;
@@ -17,7 +20,8 @@ class DocumentRepository {
 
   async findById(id) {
     try {
-      return this.db.prepare('SELECT * FROM documents WHERE id = ?').get(id);
+      const query = 'SELECT * FROM documents WHERE id = ?';
+      return await this.queryOne(query, [id]);
     } catch (error) {
       logger.error('Error in findById:', error);
       throw error;
@@ -26,7 +30,8 @@ class DocumentRepository {
 
   async findByPatientId(patientId) {
     try {
-      return this.db.prepare('SELECT * FROM documents WHERE patient_id = ? ORDER BY created_at DESC').all(patientId);
+      const query = 'SELECT * FROM documents WHERE patient_id = ? ORDER BY created_at DESC';
+      return await this.query(query, [patientId]);
     } catch (error) {
       logger.error('Error in findByPatientId:', error);
       throw error;
@@ -35,10 +40,8 @@ class DocumentRepository {
 
   async create(documentData) {
     try {
-      const stmt = this.db.prepare(
-        'INSERT INTO documents (patient_id, document_type, file_path, file_name, file_size, mime_type, metadata) VALUES (?, ?, ?, ?, ?, ?, ?)'
-      );
-      const result = stmt.run(
+      const query = 'INSERT INTO documents (patient_id, document_type, file_path, file_name, file_size, mime_type, metadata) VALUES (?, ?, ?, ?, ?, ?, ?)';
+      const params = [
         documentData.patientId,
         documentData.documentType,
         documentData.filePath,
@@ -46,8 +49,10 @@ class DocumentRepository {
         documentData.fileSize,
         documentData.mimeType,
         JSON.stringify(documentData.metadata || {})
-      );
-      return { id: result.lastInsertRowid, ...documentData };
+      ];
+      
+      const result = await this.run(query, params);
+      return { id: result.lastID, ...documentData };
     } catch (error) {
       logger.error('Error in create:', error);
       throw error;
@@ -56,13 +61,13 @@ class DocumentRepository {
 
   async update(id, documentData) {
     try {
-      const stmt = this.db.prepare(
-        'UPDATE documents SET metadata = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
-      );
-      const result = stmt.run(
+      const query = 'UPDATE documents SET metadata = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?';
+      const params = [
         JSON.stringify(documentData.metadata || {}),
         id
-      );
+      ];
+      
+      const result = await this.run(query, params);
       return result.changes > 0;
     } catch (error) {
       logger.error('Error in update:', error);
@@ -72,8 +77,8 @@ class DocumentRepository {
 
   async delete(id) {
     try {
-      const stmt = this.db.prepare('DELETE FROM documents WHERE id = ?');
-      const result = stmt.run(id);
+      const query = 'DELETE FROM documents WHERE id = ?';
+      const result = await this.run(query, [id]);
       return result.changes > 0;
     } catch (error) {
       logger.error('Error in delete:', error);
@@ -84,9 +89,8 @@ class DocumentRepository {
   async searchByMetadata(searchTerm) {
     try {
       // Note: SQLite doesn't have full-text search by default, so we're using LIKE
-      return this.db.prepare(
-        "SELECT * FROM documents WHERE metadata LIKE ? ORDER BY created_at DESC"
-      ).all(`%${searchTerm}%`);
+      const query = "SELECT * FROM documents WHERE metadata LIKE ? ORDER BY created_at DESC";
+      return await this.query(query, [`%${searchTerm}%`]);
     } catch (error) {
       logger.error('Error in searchByMetadata:', error);
       throw error;
@@ -94,4 +98,4 @@ class DocumentRepository {
   }
 }
 
-module.exports = new DocumentRepository();
+module.exports = DocumentRepository;

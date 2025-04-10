@@ -1,12 +1,16 @@
+import sqlite3 from 'sqlite3';
+import { open } from 'sqlite';
 import pg from 'pg';
-import BetterSqlite3 from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
-import logger from '../utils/logger.js';
-import dotenv from 'dotenv';
-import config from '../../config/config.js';
+import { ensureDir } from 'fs-extra';
+import { getConfig } from '../config/index.js';
+import { log } from '../utils/logging.js';
+import { createRequire } from 'module';
 import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
 
+const require = createRequire(import.meta.url);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -14,22 +18,85 @@ const __dirname = path.dirname(__filename);
 
 const { Pool } = pg;
 
-// Initialize SQLite database
-const env = process.env.NODE_ENV || 'development';
-const dbConfig = config[env].database;
+const appConfig = getConfig();
 
-const sqliteDbPath = process.env.SQLITE_DB_PATH || dbConfig.path;
-const db = new BetterSqlite3(sqliteDbPath, { 
-  verbose: process.env.NODE_ENV === 'development' ? console.log : null,
-  fileMustExist: false // Allow creating new database file if it doesn't exist
-});
+let dbInstance = null;
+
+// Export a getter for db that will always return the current dbInstance
+export const db = {
+  get instance() {
+    return dbInstance;
+  }
+};
+
+// Add these lines at the beginning of the file to have more verbose output
+console.log('Starting database initialization...');
+console.log('Loading database connection from init.js');
+
+/**
+ * Get the SQLite database path from environment variables or config
+ * @returns {string} The database file path
+ */
+export function getSQLitePath() {
+  // Use environment variable or config setting for the database path
+  const dbPath = process.env.SQLITE_DB_PATH || appConfig?.database?.sqlite?.path;
+  
+  if (!dbPath) {
+    const defaultPath = path.join(__dirname, '../../../data/patients.sqlite');
+    log.warn(`No SQLite path specified, using default: ${defaultPath}`);
+    return defaultPath;
+  }
+  
+  return dbPath;
+}
+
+/**
+ * Initialize SQLite database
+ * @returns {Promise<Object>} The SQLite database instance
+ */
+export async function initSQLite() {
+  // If we already have an instance, return it
+  if (dbInstance) {
+    return dbInstance;
+  }
+  
+  const dbPath = getSQLitePath();
+  
+  // Ensure the directory exists
+  await ensureDir(path.dirname(dbPath));
+  
+  try {
+    log.info(`Initializing SQLite database at ${dbPath}`);
+    
+    // Configure SQLite with verbose logging in development
+    const verbose = process.env.NODE_ENV === 'development' 
+      ? sqlite3.verbose() 
+      : sqlite3;
+    
+    // Open database connection using sqlite wrapper for promises
+    dbInstance = await open({
+      filename: dbPath,
+      driver: verbose.Database
+    });
+    
+    // Enable foreign keys
+    await dbInstance.exec('PRAGMA foreign_keys = ON;');
+    
+    await initSQLiteTables(dbInstance);
+    
+    return dbInstance;
+  } catch (error) {
+    log.error('Error initializing SQLite database:', error);
+    throw error;
+  }
+}
 
 let pool; // Don't create pool immediately
 
 const createPool = () => {
   try {
     // Debug: Log all relevant environment variables
-    logger.info('Environment variables:', {
+    log.info('Environment variables:', {
       NODE_ENV: process.env.NODE_ENV,
       DB_HOST: process.env.DB_HOST,
       DB_PORT: process.env.DB_PORT,
@@ -49,12 +116,12 @@ const createPool = () => {
 
     // Basic check for required variables
     if (!poolConfig.user || !poolConfig.password) {
-      logger.error('Missing required PostgreSQL credentials (DB_USER, DB_PASSWORD). Check .env file loading.');
+      log.error('Missing required PostgreSQL credentials (DB_USER, DB_PASSWORD). Check .env file loading.');
       return null;
     }
 
     // Log pool configuration (excluding password)
-    logger.info('Creating PostgreSQL pool with config:', {
+    log.info('Creating PostgreSQL pool with config:', {
       ...poolConfig,
       password: '[REDACTED]'
     });
@@ -63,18 +130,21 @@ const createPool = () => {
 
     // Test the connection
     newPool.on('error', (err) => {
-      logger.error('Unexpected error on idle PostgreSQL client', err);
+      log.error('Unexpected error on idle PostgreSQL client', err);
     });
 
     return newPool;
   } catch (error) {
-    logger.error('Error creating PostgreSQL pool:', error);
+    log.error('Error creating PostgreSQL pool:', error);
     return null;
   }
 };
 
 const initializeDatabase = async () => {
   try {
+    // Initialize SQLite first
+    dbInstance = await initSQLite();
+    
     // Create the pool only when initializing
     if (!pool) {
         pool = createPool();
@@ -82,108 +152,125 @@ const initializeDatabase = async () => {
     
     // If pool creation failed (e.g., missing creds), don't proceed with PG connection
     if (!pool) {
-        logger.error('PostgreSQL pool creation failed. Skipping PostgreSQL initialization.');
-        await initSQLiteTables(); // Initialize SQLite anyway
-        logger.info('Database initialization completed (SQLite only)');
+        log.error('PostgreSQL pool creation failed. Skipping PostgreSQL initialization.');
+        log.info('Database initialization completed (SQLite only)');
         return; 
     }
 
-    // Test the PostgreSQL connection first
+    // Test the PostgreSQL connection
     try {
       await pool.query('SELECT NOW()');
-      logger.info('PostgreSQL connection successful');
-
-      // Note: We don't need to initialize PostgreSQL tables here anymore
-      // as they will be handled by Sequelize model synchronization
-      logger.info('PostgreSQL connection ready for Sequelize');
-
-      // Initialize SQLite tables
-      await initSQLiteTables();
+      log.info('PostgreSQL connection successful');
+      log.info('PostgreSQL connection ready for Sequelize');
     } catch (pgError) {
-      logger.warn(`PostgreSQL connection failed: ${pgError.message}`);
-      logger.warn('Proceeding with SQLite only.');
+      log.warn(`PostgreSQL connection failed: ${pgError.message}`);
+      log.warn('Proceeding with SQLite only.');
       // Consider logging pgError.code or the full error in debug mode
       if (pgError.code === '28P01') { // Specific code for auth failure
-          logger.error('PostgreSQL Authentication Failed: Check DB_USER and DB_PASSWORD in your loaded .env file.');
+          log.error('PostgreSQL Authentication Failed: Check DB_USER and DB_PASSWORD in your loaded .env file.');
       }
     }
 
-    logger.info('Database initialization completed');
+    log.info('Database initialization completed');
   } catch (error) {
-    logger.error('Error initializing database:', error);
+    log.error('Error initializing database:', error);
     throw error;
   }
-};
+}
 
-// Initialize SQLite tables
-function initSQLiteTables() {
+/**
+ * Initialize all required SQLite tables
+ * @param {Object} db The SQLite database instance
+ */
+export async function initSQLiteTables(db) {
+  log.info('Initializing SQLite tables...');
+  
   try {
-    // Create patients table if it doesn't exist
-    db.prepare(`
+    // Create patients table
+    await db.exec(`
       CREATE TABLE IF NOT EXISTS patients (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        species TEXT,
-        breed TEXT,
-        bloodType TEXT,
-        mrn TEXT,
-        createdAt TEXT,
-        updatedAt TEXT
-      )
-    `).run();
-
-    // Create reports table if it doesn't exist
-    db.prepare(`
-      CREATE TABLE IF NOT EXISTS reports (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        patientId INTEGER,
-        title TEXT NOT NULL,
-        content TEXT,
-        filePath TEXT,
-        reportType TEXT,
-        createdAt TEXT,
-        updatedAt TEXT,
-        FOREIGN KEY (patientId) REFERENCES patients(id) ON DELETE SET NULL
-      )
-    `).run();
-
-    // Create caution_cards table if it doesn't exist
-    db.prepare(`
-      CREATE TABLE IF NOT EXISTS caution_cards (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        patient_id INTEGER,
-        image_path TEXT,
-        file_name TEXT,
-        mime_type TEXT,
+        id TEXT PRIMARY KEY,
+        first_name TEXT NOT NULL,
+        last_name TEXT NOT NULL,
+        date_of_birth TEXT NOT NULL,
+        gender TEXT,
+        contact_number TEXT,
+        email TEXT,
+        address TEXT,
+        emergency_contact TEXT,
         blood_type TEXT,
-        created_at TEXT,
-        updated_at TEXT,
-        status TEXT DEFAULT 'pending',
-        FOREIGN KEY (patient_id) REFERENCES patients(id) ON DELETE CASCADE
+        allergies TEXT,
+        medical_conditions TEXT,
+        medications TEXT,
+        notes TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
-    `).run();
-
-    // Create events table for real-time event system if it doesn't exist
-    db.prepare(`
+    `);
+    
+    // Create reports table
+    await db.exec(`
+      CREATE TABLE IF NOT EXISTS reports (
+        id TEXT PRIMARY KEY,
+        patient_id TEXT NOT NULL,
+        title TEXT NOT NULL,
+        content TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (patient_id) REFERENCES patients (id) ON DELETE CASCADE
+      )
+    `);
+    
+    // Create caution_cards table
+    await db.exec(`
+      CREATE TABLE IF NOT EXISTS caution_cards (
+        id TEXT PRIMARY KEY,
+        patient_id TEXT NOT NULL,
+        title TEXT NOT NULL,
+        description TEXT NOT NULL,
+        severity TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (patient_id) REFERENCES patients (id) ON DELETE CASCADE
+      )
+    `);
+    
+    // Create events table
+    await db.exec(`
       CREATE TABLE IF NOT EXISTS events (
         id TEXT PRIMARY KEY,
-        type TEXT NOT NULL,
-        data TEXT NOT NULL,
-        version INTEGER NOT NULL,
-        created_at INTEGER NOT NULL
+        patient_id TEXT NOT NULL,
+        title TEXT NOT NULL,
+        description TEXT,
+        event_date TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (patient_id) REFERENCES patients (id) ON DELETE CASCADE
       )
-    `).run();
+    `);
+    
+    // Create any necessary indexes
+    await createIndexes(db);
 
-    // Create indexes for efficient querying
-    db.prepare('CREATE INDEX IF NOT EXISTS idx_events_version ON events (version)').run();
-    db.prepare('CREATE INDEX IF NOT EXISTS idx_events_type ON events (type)').run();
-    db.prepare('CREATE INDEX IF NOT EXISTS idx_events_created_at ON events (created_at)').run();
-
-    logger.info('SQLite tables created successfully');
+    log.info('SQLite tables initialized successfully');
   } catch (error) {
-    logger.error('Error creating SQLite tables:', error);
+    log.error('Error initializing SQLite tables:', error);
     throw error;
   }
+}
+
+/**
+ * Create database indexes
+ * @param {Object} db The SQLite database instance
+ */
+async function createIndexes(db) {
+  // Create indexes to improve query performance
+  await db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_patients_name ON patients (last_name, first_name);
+    CREATE INDEX IF NOT EXISTS idx_reports_patient_id ON reports (patient_id);
+    CREATE INDEX IF NOT EXISTS idx_caution_cards_patient_id ON caution_cards (patient_id);
+    CREATE INDEX IF NOT EXISTS idx_events_patient_id ON events (patient_id);
+    CREATE INDEX IF NOT EXISTS idx_events_date ON events (event_date);
+  `);
 }
 
 // Initialize PostgreSQL tables (for compatibility with existing code)
@@ -244,9 +331,9 @@ async function initPostgresTables() {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )`);
 
-    logger.info('PostgreSQL tables created successfully');
+    log.info('PostgreSQL tables created successfully');
   } catch (error) {
-    logger.error('Error creating PostgreSQL tables:', error);
+    log.error('Error creating PostgreSQL tables:', error);
     throw error;
   }
 }
@@ -259,19 +346,19 @@ const resetPool = async () => {
     }
     pool = createPool(); // Recreate pool using the function
     if (!pool) {
-        logger.error('Failed to recreate PostgreSQL pool during reset.');
+        log.error('Failed to recreate PostgreSQL pool during reset.');
         return null; // Or handle as appropriate
     }
-    logger.info('PostgreSQL pool reset.');
+    log.info('PostgreSQL pool reset.');
     return pool;
   } catch (error) {
-    logger.error('Error resetting pool:', error);
+    log.error('Error resetting pool:', error);
     throw error;
   }
 };
 
 // Export the database instance and other utilities
-export { db, pool, initializeDatabase, resetPool };
+export { dbInstance, pool, initializeDatabase, resetPool };
 
 // If this file is run directly, initialize the database
 // Get the current file path and the entry point script path

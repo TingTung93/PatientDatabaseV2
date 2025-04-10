@@ -1,4 +1,4 @@
-const { db, closeDb } = require('./init');
+import { db, closeDb } from './init.js';
 
 /**
  * Seed the database with test data

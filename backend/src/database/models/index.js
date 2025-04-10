@@ -34,14 +34,16 @@ const initializeModels = (sequelize) => {
     }
   });
   
-  // If associate method is not used, define associations manually here:
-  // Example: 
-  // User.hasMany(PasswordReset, { foreignKey: 'user_id', as: 'passwordResets' });
-  // PasswordReset.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
-  // Patient.hasMany(Report, { foreignKey: 'patient_id' });
-  // Report.belongsTo(Patient, { foreignKey: 'patient_id' });
-  // Patient.hasMany(CautionCard, { foreignKey: 'patient_id' });
-  // CautionCard.belongsTo(Patient, { foreignKey: 'patient_id' });
+  // Define associations explicitly for models that don't use the static associate method
+  // Patient <-> Report
+  Patient.hasMany(Report, { foreignKey: 'patient_id', as: 'reports' });
+  Report.belongsTo(Patient, { foreignKey: 'patient_id', as: 'patient' });
+
+  // Patient <-> CautionCard
+  Patient.hasMany(CautionCard, { foreignKey: 'patient_id', as: 'cautionCards' });
+  CautionCard.belongsTo(Patient, { foreignKey: 'patient_id', as: 'patient' });
+  
+  // Note: User <-> PasswordReset association is handled by the static associate methods
 
   // Return the initialized models
   return models;

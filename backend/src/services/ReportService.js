@@ -52,7 +52,7 @@ class ReportService extends BaseService {
     try {
       // Validate patient if ID provided
       if (patientId) {
-        const patient = db.prepare('SELECT * FROM patients WHERE id = ?').get(patientId);
+        const patient = await db.instance.get('SELECT * FROM patients WHERE id = ?', [patientId]);
         if (!patient) {
           throw new AppError('Patient not found', 404);
         }
@@ -81,14 +81,14 @@ class ReportService extends BaseService {
       };
 
       // Create report record
-      const stmt = db.prepare(`
+      const query = `
         INSERT INTO reports (
           patient_id, report_type, filename, original_filename,
           mime_type, size, path, status, metadata
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `);
+      `;
 
-      const result = stmt.run(
+      const params = [
         reportData.patient_id,
         reportData.report_type,
         reportData.filename,
@@ -98,16 +98,20 @@ class ReportService extends BaseService {
         reportData.path,
         reportData.status,
         reportData.metadata
-      );
+      ];
 
-      const report = db.prepare('SELECT * FROM reports WHERE id = ?').get(result.lastInsertRowid);
+      const result = await db.instance.run(query, params);
+      const report = await db.instance.get('SELECT * FROM reports WHERE id = ?', [result.lastID]);
       logger.info(`Report record created with ID: ${report.id}`);
 
       // Start processing in background
       this.processReport(report.id).catch(error => {
         logger.error(`Error processing report ${report.id}:`, error);
-        const updateStmt = db.prepare('UPDATE reports SET status = ?, error = ? WHERE id = ?');
-        updateStmt.run('failed', error.message, report.id);
+        db.instance.run('UPDATE reports SET status = ?, error = ? WHERE id = ?', [
+          'failed', error.message, report.id
+        ]).catch(err => {
+          logger.error('Error updating report status:', err);
+        });
       });
 
       return report;
@@ -126,15 +130,14 @@ class ReportService extends BaseService {
     logger.info(`Starting processReport for report ID: ${reportId}`);
     try {
       // Get report
-      const report = db.prepare('SELECT * FROM reports WHERE id = ?').get(reportId);
+      const report = await db.instance.get('SELECT * FROM reports WHERE id = ?', [reportId]);
       if (!report) {
         logger.error(`Report not found with ID: ${reportId}`);
         throw new AppError('Report not found', 404);
       }
 
       // Update status to processing
-      const updateStmt = db.prepare('UPDATE reports SET status = ? WHERE id = ?');
-      updateStmt.run('processing', reportId);
+      await db.instance.run('UPDATE reports SET status = ? WHERE id = ?', ['processing', reportId]);
 
       // Get report content based on file type
       let textContent = '';
@@ -162,23 +165,24 @@ class ReportService extends BaseService {
           }
           
           // Update report with parsed data
-          const updateOcrStmt = db.prepare(`
+          const updateQuery = `
             UPDATE reports 
             SET status = ?, ocr_text = ?, structured_data = ?, updated_at = CURRENT_TIMESTAMP 
             WHERE id = ?
-          `);
-          updateOcrStmt.run(
+          `;
+          await db.instance.run(updateQuery, [
             'completed',
             textContent,
             JSON.stringify(structuredData),
             report.id
-          );
+          ]);
           
           logger.info(`Text report ${report.id} processed successfully`);
         } catch (err) {
           logger.error(`Failed to process text report ${report.id}:`, err);
-          const updateStatusStmt = db.prepare('UPDATE reports SET status = ?, error = ? WHERE id = ?');
-          updateStatusStmt.run('failed', err.message, report.id);
+          await db.instance.run('UPDATE reports SET status = ?, error = ? WHERE id = ?', [
+            'failed', err.message, report.id
+          ]);
           logger.error(`Updating report status to failed due to error: ${err.message}`);
           throw err;
         }
@@ -188,17 +192,17 @@ class ReportService extends BaseService {
         textContent = ocrResult.text;
         
         // Update report with OCR results
-        const updateOcrStmt = db.prepare(`
+        const updateQuery = `
           UPDATE reports 
           SET status = ?, ocr_text = ?, structured_data = ?, updated_at = CURRENT_TIMESTAMP 
           WHERE id = ?
-        `);
-        updateOcrStmt.run(
+        `;
+        await db.instance.run(updateQuery, [
           'completed',
           textContent,
           JSON.stringify(ocrResult),
           report.id
-        );
+        ]);
       }
 
       return {
@@ -209,8 +213,9 @@ class ReportService extends BaseService {
       logger.error(`OCR processing error for report ${reportId}:`, error);
       logger.error(`Full error details: ${error.stack}`);
       
-      const updateStatusStmt = db.prepare('UPDATE reports SET status = ?, error = ? WHERE id = ?');
-      updateStatusStmt.run('failed', error.message, reportId);
+      await db.instance.run('UPDATE reports SET status = ?, error = ? WHERE id = ?', [
+        'failed', error.message, reportId
+      ]);
       
       throw new AppError('OCR processing failed', 500, error);
     }
@@ -226,11 +231,13 @@ class ReportService extends BaseService {
     const perPage = options.perPage || 20;
     const offset = (page - 1) * perPage;
 
-    const countStmt = db.prepare('SELECT COUNT(*) as count FROM reports');
-    const { count } = countStmt.get();
+    const countResult = await db.instance.get('SELECT COUNT(*) as count FROM reports');
+    const count = countResult.count;
 
-    const stmt = db.prepare('SELECT * FROM reports ORDER BY created_at DESC LIMIT ? OFFSET ?');
-    const reports = stmt.all(perPage, offset);
+    const reports = await db.instance.all(
+      'SELECT * FROM reports ORDER BY created_at DESC LIMIT ? OFFSET ?', 
+      [perPage, offset]
+    );
 
     return {
       reports,
@@ -246,7 +253,7 @@ class ReportService extends BaseService {
    * @returns {Promise<Object>} Report object
    */
   async getReportById(reportId) {
-    const report = db.prepare('SELECT * FROM reports WHERE id = ?').get(reportId);
+    const report = await db.instance.get('SELECT * FROM reports WHERE id = ?', [reportId]);
     if (!report) {
       throw new AppError('Report not found', 404);
     }
@@ -284,58 +291,97 @@ class ReportService extends BaseService {
   /**
    * Delete a report
    * @param {string} reportId Report ID
-   * @returns {Promise<void>}
+   * @returns {Promise<boolean>} Success
    */
   async deleteReport(reportId) {
-    const report = await this.getReportById(reportId);
     try {
+      // Get report to verify it exists and get file path
+      const report = await db.instance.get('SELECT * FROM reports WHERE id = ?', [reportId]);
+      if (!report) {
+        throw new AppError('Report not found', 404);
+      }
+
       // Delete file
-      await fs.unlink(report.path);
+      if (report.path) {
+        try {
+          await fs.unlink(report.path);
+        } catch (fileError) {
+          // If file doesn't exist, log but continue
+          logger.warn(`Error deleting report file: ${fileError.message}`);
+        }
+      }
+
+      // Delete from database
+      await db.instance.run('DELETE FROM reports WHERE id = ?', [reportId]);
       
-      // Delete database record
-      const stmt = db.prepare('DELETE FROM reports WHERE id = ?');
-      stmt.run(reportId);
+      return true;
     } catch (error) {
       logger.error(`Error deleting report ${reportId}:`, error);
-      throw new AppError('Failed to delete report', 500);
+      throw new AppError('Failed to delete report', 500, error);
     }
   }
 
   /**
-   * Save parsed patient data to database
-   * @param {Object} patientData Patient data from report
-   * @returns {Promise<Object>} Saved patient record
+   * Save patient data extracted from a report
+   * @param {Object} patientData Patient data
+   * @returns {Promise<Object>} Patient object
    */
   async saveParsedPatient(patientData) {
     try {
-      const stmt = db.prepare(`
-        INSERT INTO patients (
-          name, dob, blood_type, antigen_phenotype,
-          transfusion_restrictions, antibodies, contact_number
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)
-        ON CONFLICT(name, dob) DO UPDATE SET
-          blood_type = excluded.blood_type,
-          antigen_phenotype = excluded.antigen_phenotype,
-          transfusion_restrictions = excluded.transfusion_restrictions,
-          antibodies = excluded.antibodies,
-          contact_number = excluded.contact_number,
+      // Check if patient with matching MRN exists
+      let patient = null;
+      if (patientData.mrn) {
+        patient = await db.instance.get('SELECT * FROM patients WHERE mrn = ?', [patientData.mrn]);
+      }
+
+      if (patient) {
+        // Update existing patient
+        const updateQuery = `
+          UPDATE patients SET
+          first_name = COALESCE(?, first_name),
+          last_name = COALESCE(?, last_name),
+          date_of_birth = COALESCE(?, date_of_birth),
+          gender = COALESCE(?, gender),
+          blood_type = COALESCE(?, blood_type),
           updated_at = CURRENT_TIMESTAMP
-      `);
+          WHERE id = ?
+        `;
 
-      const result = stmt.run(
-        `${patientData.firstName} ${patientData.lastName}`,
-        patientData.birthDate,
-        patientData.bloodType,
-        patientData.phenotype || null,
-        patientData.transfusionRequirements || null,
-        JSON.stringify(patientData.antibodies || []),
-        patientData.contactNumber || null
-      );
+        const params = [
+          patientData.firstName,
+          patientData.lastName,
+          patientData.dateOfBirth,
+          patientData.gender,
+          patientData.bloodType,
+          patient.id
+        ];
 
-      return db.prepare('SELECT * FROM patients WHERE id = ?').get(result.lastInsertRowid);
+        await db.instance.run(updateQuery, params);
+        return await db.instance.get('SELECT * FROM patients WHERE id = ?', [patient.id]);
+      } else {
+        // Create new patient
+        const insertQuery = `
+          INSERT INTO patients (
+            first_name, last_name, date_of_birth, gender,
+            mrn, blood_type, created_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        `;
+
+        const params = [
+          patientData.firstName,
+          patientData.lastName, 
+          patientData.dateOfBirth,
+          patientData.gender,
+          patientData.mrn,
+          patientData.bloodType
+        ];
+
+        const result = await db.instance.run(insertQuery, params);
+        return await db.instance.get('SELECT * FROM patients WHERE id = ?', [result.lastID]);
+      }
     } catch (error) {
       logger.error('Error saving parsed patient:', error);
-      throw new AppError('Failed to save patient data', 500);
+      throw new AppError('Failed to save patient data', 500, error);
     }
   }
 

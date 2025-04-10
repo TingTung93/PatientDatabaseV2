@@ -3,10 +3,12 @@
  * This class handles all database operations related to reports.
  */
 const BaseRepository = require('./BaseRepository');
+const { dbInstance } = require('../database/init');
+const logger = require('../utils/logger');
 
 class ReportRepository extends BaseRepository {
   constructor(db) {
-    super(db);
+    super(db || dbInstance);
     this.tableName = 'reports';
   }
 
@@ -46,70 +48,110 @@ class ReportRepository extends BaseRepository {
 
     query += ' ORDER BY created_at DESC';
 
-    const stmt = this.db.prepare(query);
-    return stmt.all(...params);
+    try {
+      return await this.query(query, params);
+    } catch (error) {
+      logger.error('Error searching reports:', error);
+      throw error;
+    }
   }
 
   async getReportWithPatient(reportId) {
-    const stmt = this.db.prepare(`
+    const query = `
       SELECT r.*, p.first_name, p.last_name, p.date_of_birth
       FROM ${this.tableName} r
       LEFT JOIN patients p ON r.patient_id = p.id
       WHERE r.id = ?
-    `);
-    return stmt.get(reportId);
+    `;
+    
+    try {
+      return await this.queryOne(query, [reportId]);
+    } catch (error) {
+      logger.error('Error getting report with patient:', error);
+      throw error;
+    }
   }
 
   async getReportAttachments(reportId) {
-    const stmt = this.db.prepare(`
+    const query = `
       SELECT * FROM report_attachments
       WHERE report_id = ?
       ORDER BY created_at ASC
-    `);
-    return stmt.all(reportId);
+    `;
+    
+    try {
+      return await this.query(query, [reportId]);
+    } catch (error) {
+      logger.error('Error getting report attachments:', error);
+      throw error;
+    }
   }
 
   async addAttachment(reportId, attachmentData) {
-    const stmt = this.db.prepare(`
+    const query = `
       INSERT INTO report_attachments (
         report_id, file_name, file_path, file_type, file_size
       ) VALUES (?, ?, ?, ?, ?)
-    `);
+    `;
     
-    const result = stmt.run(
+    const params = [
       reportId,
       attachmentData.fileName,
       attachmentData.filePath,
       attachmentData.fileType,
       attachmentData.fileSize
-    );
+    ];
     
-    return this.getAttachmentById(result.lastInsertRowid);
+    try {
+      const result = await this.run(query, params);
+      return await this.getAttachmentById(result.lastID);
+    } catch (error) {
+      logger.error('Error adding report attachment:', error);
+      throw error;
+    }
   }
 
   async getAttachmentById(attachmentId) {
-    const stmt = this.db.prepare(`
+    const query = `
       SELECT * FROM report_attachments
       WHERE id = ?
-    `);
-    return stmt.get(attachmentId);
+    `;
+    
+    try {
+      return await this.queryOne(query, [attachmentId]);
+    } catch (error) {
+      logger.error('Error getting attachment by ID:', error);
+      throw error;
+    }
   }
 
   async deleteAttachment(attachmentId) {
-    const stmt = this.db.prepare(`
+    const query = `
       DELETE FROM report_attachments
       WHERE id = ?
-    `);
-    return stmt.run(attachmentId);
+    `;
+    
+    try {
+      return await this.run(query, [attachmentId]);
+    } catch (error) {
+      logger.error('Error deleting attachment:', error);
+      throw error;
+    }
   }
 
   async updateStatus(reportId, status, updatedBy) {
-    const stmt = this.db.prepare(`
+    const query = `
       UPDATE ${this.tableName}
       SET status = ?, updated_by = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
-    `);
-    return stmt.run(status, updatedBy, reportId);
+    `;
+    
+    try {
+      return await this.run(query, [status, updatedBy, reportId]);
+    } catch (error) {
+      logger.error('Error updating report status:', error);
+      throw error;
+    }
   }
 }
 

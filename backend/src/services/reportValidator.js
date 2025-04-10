@@ -80,12 +80,13 @@ class ReportValidator {
     }
 
     static isValidBloodType(bloodType) {
+        // Allow both formats: 'B POS' (from parser) and 'B+' (legacy format)
         const validTypes = [
-            'A POS', 'A NEG',
-            'B POS', 'B NEG',
-            'O POS', 'O NEG',
-            'AB POS', 'AB NEG',
-            '<None>'
+            'A POS', 'A NEG', 'A+', 'A-',
+            'B POS', 'B NEG', 'B+', 'B-',
+            'O POS', 'O NEG', 'O+', 'O-',
+            'AB POS', 'AB NEG', 'AB+', 'AB-',
+            '<None>', 'Unknown'
         ];
         return validTypes.includes(bloodType);
     }
@@ -97,30 +98,63 @@ class ReportValidator {
             warnings: []
         };
 
+        // Add debug information to see what's coming in
+        logger.debug(`Validating report data: ${JSON.stringify(reportData)}`);
+
+        // Check if reportData exists
+        if (!reportData) {
+            result.isValid = false;
+            result.errors.push('Missing report data');
+            logger.error('Report validation failed: Missing report data');
+            return result;
+        }
+
         // Validate metadata
         if (!reportData.metadata) {
             result.isValid = false;
             result.errors.push('Missing report metadata');
+            logger.error('Report validation failed: Missing metadata');
             return result;
         }
 
-        const requiredMetadataFields = ['facility', 'facilityId', 'reportDate', 'reportType'];
+        // Make these fields optional for now
+        const requiredMetadataFields = ['reportType'];
+        const optionalMetadataFields = ['facility', 'facilityId', 'reportDate'];
+        
+        // Check required fields
         for (const field of requiredMetadataFields) {
             if (!reportData.metadata[field]) {
                 result.isValid = false;
                 result.errors.push(`Missing required metadata field: ${field}`);
+                logger.error(`Report validation failed: Missing metadata field ${field}`);
+            }
+        }
+        
+        // Warn about optional fields 
+        for (const field of optionalMetadataFields) {
+            if (!reportData.metadata[field]) {
+                result.warnings.push(`Missing optional metadata field: ${field}`);
+                logger.warn(`Report validation warning: Missing metadata field ${field}`);
+                
+                // Set default values for missing fields
+                if (field === 'reportType') reportData.metadata.reportType = 'BLOOD_BANK';
+                if (field === 'facility') reportData.metadata.facility = 'UNKNOWN';
+                if (field === 'facilityId') reportData.metadata.facilityId = 'UNKNOWN';
+                if (field === 'reportDate') reportData.metadata.reportDate = new Date().toISOString().split('T')[0];
             }
         }
 
-        // Validate patients
+        // Validate patients array
         if (!Array.isArray(reportData.patients)) {
             result.isValid = false;
             result.errors.push('Missing or invalid patients array');
+            logger.error('Report validation failed: Invalid patients array');
             return result;
         }
 
         if (reportData.patients.length === 0) {
             result.warnings.push('Report contains no patient records');
+            logger.warn('Report validation warning: No patient records');
         }
 
         // Track medical record numbers to check for duplicates
@@ -133,46 +167,80 @@ class ReportValidator {
                 'lastName',
                 'firstName',
                 'medicalRecordNumber',
-                'dateOfBirth',
-                'bloodType'
+                'dateOfBirth'
+                // Making bloodType optional since some hospitals might not record it
             ];
+
+            const patientId = patient.medicalRecordNumber || 'unknown';
+            logger.debug(`Validating patient: ${patientId}`);
 
             for (const field of requiredFields) {
                 if (!patient[field]) {
                     result.isValid = false;
-                    result.errors.push(`Missing required patient field: ${field}`);
+                    result.errors.push(`Patient ${patientId}: Missing required field: ${field}`);
+                    logger.error(`Report validation failed: Patient ${patientId} missing field ${field}`);
                 }
             }
 
-            // Validate blood type
-            const validBloodTypes = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
-            if (patient.bloodType && !validBloodTypes.includes(patient.bloodType)) {
-                result.isValid = false;
-                result.errors.push(`Invalid blood type: ${patient.bloodType}`);
+            // Validate blood type only if present
+            if (patient.bloodType) {
+                const validBloodTypes = [
+                    'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-', 
+                    'A POS', 'A NEG', 'B POS', 'B NEG', 'AB POS', 'AB NEG', 'O POS', 'O NEG',
+                    'Unknown', '<None>'
+                ];
+                if (!validBloodTypes.includes(patient.bloodType)) {
+                    result.warnings.push(`Patient ${patientId}: Unusual blood type: ${patient.bloodType}`);
+                    logger.warn(`Report validation warning: Patient ${patientId} has unusual blood type: ${patient.bloodType}`);
+                }
             }
 
             // Check for duplicate medical record numbers
             if (patient.medicalRecordNumber) {
                 if (mrnSet.has(patient.medicalRecordNumber)) {
                     result.warnings.push(`Duplicate medical record numbers found: ${patient.medicalRecordNumber}`);
+                    logger.warn(`Report validation warning: Duplicate MRN: ${patient.medicalRecordNumber}`);
                 } else {
                     mrnSet.add(patient.medicalRecordNumber);
                 }
             }
 
             // Validate arrays
-            const arrayFields = ['transfusionRequirements', 'antibodies', 'antigens', 'comments'];
+            const arrayFields = ['transfusionRequirements', 'antibodies', 'antigens'];
             for (const field of arrayFields) {
                 if (patient[field] && !Array.isArray(patient[field])) {
                     result.isValid = false;
-                    result.errors.push(`Invalid ${field}: must be an array`);
+                    result.errors.push(`Patient ${patientId}: Invalid ${field}: must be an array`);
+                    logger.error(`Report validation failed: Patient ${patientId} has invalid ${field} type`);
+                }
+            }
+            
+            // Make sure arrayFields are defined if they're not already
+            for (const field of arrayFields) {
+                if (!patient[field]) {
+                    patient[field] = [];
                 }
             }
 
-            // Validate dates
-            if (patient.dateOfBirth && !(patient.dateOfBirth instanceof Date)) {
-                result.isValid = false;
-                result.errors.push('Invalid date of birth format');
+            // Validate comments only if present
+            if (patient.comments) {
+                if (!Array.isArray(patient.comments)) {
+                    result.isValid = false;
+                    result.errors.push(`Patient ${patientId}: Invalid comments: must be an array`);
+                    logger.error(`Report validation failed: Patient ${patientId} has invalid comments type`);
+                }
+            } else {
+                patient.comments = [];  // Initialize if missing
+            }
+
+            // Validate dates - allow string dates or Date objects
+            if (patient.dateOfBirth) {
+                const dob = new Date(patient.dateOfBirth);
+                if (isNaN(dob)) {
+                    result.isValid = false;
+                    result.errors.push(`Patient ${patientId}: Invalid date of birth: ${patient.dateOfBirth}`);
+                    logger.error(`Report validation failed: Patient ${patientId} has invalid date of birth`);
+                }
             }
         }
 

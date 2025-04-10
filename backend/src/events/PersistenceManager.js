@@ -7,7 +7,7 @@
  */
 import { db } from '../database/init.js';
 import eventClassifier from './EventClassifier.js';
-import logger from '../utils/logger.js';
+import { log } from '../utils/logging.js';
 
 class PersistenceManager {
   constructor() {
@@ -47,7 +47,7 @@ class PersistenceManager {
         return this.storeInMemory(event, 'transient');
       }
     } catch (error) {
-      logger.error('Failed to persist event:', error);
+      log.error('Failed to persist event:', error);
       return false;
     }
   }
@@ -59,20 +59,26 @@ class PersistenceManager {
    */
   async storeInDatabase(event) {
     try {
+      // Check if database is initialized
+      if (!db.instance) {
+        log.error('Database instance is not initialized');
+        return false;
+      }
+      
       // Store event in database with timestamp
-      db.prepare(
-        'INSERT INTO events (id, type, data, version, created_at) VALUES (?, ?, ?, ?, ?)'
-      ).run(
+      const query = 'INSERT INTO events (id, type, data, version, created_at) VALUES (?, ?, ?, ?, ?)';
+      const params = [
         event.id,
         event.type,
         JSON.stringify(event.data),
         event.version,
         event.timestamp
-      );
+      ];
       
+      await db.instance.run(query, params);
       return true;
     } catch (error) {
-      logger.error('Failed to persist event to database:', error);
+      log.error('Failed to persist event to database:', error);
       return false;
     }
   }
@@ -100,7 +106,7 @@ class PersistenceManager {
       
       return true;
     } catch (error) {
-      logger.error(`Failed to store event in memory (${category}):`, error);
+      log.error(`Failed to store event in memory (${category}):`, error);
       return false;
     }
   }
@@ -137,7 +143,7 @@ class PersistenceManager {
       
       return results;
     } catch (error) {
-      logger.error('Error retrieving events:', error);
+      log.error('Error retrieving events:', error);
       return {};
     }
   }
@@ -152,6 +158,12 @@ class PersistenceManager {
     const results = {};
     
     try {
+      // Check if database is initialized
+      if (!db.instance) {
+        log.error('Database instance is not initialized');
+        return results;
+      }
+      
       let query = 'SELECT * FROM events WHERE version > ?';
       const params = [clientVersion];
       
@@ -162,7 +174,7 @@ class PersistenceManager {
       
       query += ' ORDER BY version ASC LIMIT 1000';
       
-      const events = db.prepare(query).all(params);
+      const events = await db.instance.all(query, params);
       
       // Group by event type
       for (const event of events) {
@@ -181,7 +193,7 @@ class PersistenceManager {
       
       return results;
     } catch (error) {
-      logger.error('Error retrieving critical events:', error);
+      log.error('Error retrieving critical events:', error);
       return {};
     }
   }
@@ -201,7 +213,7 @@ class PersistenceManager {
         // Clean transient events
         this.cleanupCategory('transient', now - this.retentionPeriods.transient);
       } catch (error) {
-        logger.error('Error during event cleanup:', error);
+        log.error('Error during event cleanup:', error);
       }
     }, 5 * 60 * 1000); // Run cleanup every 5 minutes
   }

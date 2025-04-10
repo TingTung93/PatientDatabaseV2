@@ -1,72 +1,52 @@
-const { DataTypes } = require('sequelize');
+import { DataTypes } from 'sequelize';
 
-module.exports = (sequelize) => {
+export default (sequelize) => {
   const Report = sequelize.define('Report', {
     id: {
-      type: DataTypes.INTEGER,
-      primaryKey: true,
-      autoIncrement: true
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true
     },
     patient_id: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.UUID,
       allowNull: false,
       references: {
         model: 'Patients',
         key: 'id'
       }
     },
-    type: {
+    title: {
       type: DataTypes.STRING,
-      allowNull: false,
-      validate: {
-        notEmpty: true
-      }
+      allowNull: false
     },
     content: {
       type: DataTypes.TEXT,
       allowNull: false
     },
-    date: {
-      type: DataTypes.DATE,
-      allowNull: false,
+    report_date: {
+      type: DataTypes.DATEONLY,
       defaultValue: DataTypes.NOW
     },
-    created_by: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      references: {
-        model: 'Users',
-        key: 'id'
-      }
+    report_type: {
+      type: DataTypes.STRING,
+      allowNull: false
     },
-    updated_by: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-      references: {
-        model: 'Users',
-        key: 'id'
-      }
-    },
-    deleted_at: {
-      type: DataTypes.DATE,
-      allowNull: true
+    metadata: {
+      type: DataTypes.JSON,
+      defaultValue: {}
     }
   }, {
-    timestamps: true,
-    paranoid: true,
+    tableName: 'Reports',
     underscored: true,
     indexes: [
       {
         fields: ['patient_id']
       },
       {
-        fields: ['type']
+        fields: ['report_date']
       },
       {
-        fields: ['date']
-      },
-      {
-        fields: ['created_by']
+        fields: ['report_type']
       }
     ]
   });
